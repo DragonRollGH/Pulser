@@ -15,7 +15,7 @@ const canvasCenterY = canvas.height / 2;
 const pageCenterY = canvas.offsetHeight + canvasCenterY;
 const heartRadiusMin = 30;
 const heartRadiusMax = 150;
-sdf
+
 var frontendNodes = [];
 var f = 0;
 var n = 0;
