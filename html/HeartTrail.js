@@ -1,22 +1,23 @@
 const TWOPI = Math.PI * 2;
 
-const frontendPoints = 60;          //页面的像素数
-const frontendScale = TWOPI / frontendPoints;
-const backendPoints = 24;           //设备的像素数
-const backendScale = TWOPI / backendPoints;
+const WebPixelLen = 60;          //页面的像素数
+const WebPixelRad = TWOPI / WebPixelLen;
+const DevPixelLen = 24;           //设备的像素数
+const DevPixelRad = TWOPI / DevPixelLen;
 
 var canvas = document.getElementById("Heart");
 var img = document.getElementById("Img");
 var ctx = canvas.getContext("2d");
 
-const canvasCenterX = canvas.width / 2;
-const pageCenterX = canvas.offsetLeft + canvasCenterX;
-const canvasCenterY = canvas.height / 2;
-const pageCenterY = canvas.offsetHeight + canvasCenterY;
-const heartRadiusMin = 30;
-const heartRadiusMax = 150;
+const CanvasCenterX = canvas.width / 2;
+const CanvasCenterPageX = canvas.getBoundingClientRect().left + canvas.width / 2;
+const CanvasCenterY = canvas.height / 2;
+const CanvasCenterPageY = canvas.getBoundingClientRect().top + canvas.height / 2;
+const TouchRegionMin = 30;
+const TouchRegionMax = 150;
 
-var frontendNodes = [];
+var webPixels = [];
+
 var f = 0;
 var n = 0;
 
@@ -29,24 +30,24 @@ const mouse = {
     backendIdNew: undefined
 };
 img.addEventListener('mousemove', function (event) {
-    mouse.x = event.x - canvasCenterX;
-    mouse.y = event.y - canvasCenterY;
+    mouse.x = event.x - CanvasCenterPageX;
+    mouse.y = event.y - CanvasCenterPageY;
 })
 img.addEventListener('touchmove', function (event) {
     event.preventDefault();
-    mouse.x = event.touches[0].clientX - canvasCenterX;
-    mouse.y = event.touches[0].clientY - canvasCenterY;
+    mouse.x = event.touches[0].clientX - CanvasCenterPageX;
+    mouse.y = event.touches[0].clientY - CanvasCenterPageY;
 })
 function updateMouse(x, y) {
     var r = Math.sqrt(x ** 2 + y ** 2);
     var t = Math.atan2(y, x);
-    if (heartRadiusMin < r && r < heartRadiusMax) {
+    if (TouchRegionMin < r && r < TouchRegionMax) {
         if (mouse.frontendIdNew) {
             mouse.frontendIdOld = mouse.frontendIdNew;
             mouse.backendIdOld = mouse.backendIdNew;
         }
-        mouse.frontendIdNew = (Math.floor(t / frontendScale) + frontendPoints) % frontendPoints;
-        mouse.backendIdNew = (Math.floor(t / backendScale) + backendPoints) % backendPoints;
+        mouse.frontendIdNew = (Math.floor(t / WebPixelRad) + WebPixelLen) % WebPixelLen;
+        mouse.backendIdNew = (Math.floor(t / DevPixelRad) + DevPixelLen) % DevPixelLen;
     }
     else {
         mouse.frontendIdOld = undefined;
@@ -56,11 +57,51 @@ function updateMouse(x, y) {
     }
 }
 
-class frontendNode {
-    constructor(id) {
+class Cursor {
+    constructor() {
+        // this.webPixelLen = webPixelLen;
+        // this.webPixelRad = webPixelRad;
+        // this.devPixelLen = devPixelLen;
+        // this.devPixelRad = devPixelRad;
+        this.x = undefined;
+        this.y = undefined;
+        this.webPixelIds = [undefined, undefined];
+        this.devPixelIds = [undefined, undefined];
+    }
+    handleMouse(event) {
+        this.x = event.x - CanvasCenterPageX;
+        this.y = event.y - CanvasCenterPageY;
+    }
+    handleTouch(event) {
+        event.preventDefault();
+        this.x = event.touches[0].pageX - CanvasCenterPageX;
+        this.y = event.touches[0].pageY - CanvasCenterPageY;
+    }
+    updata() {
+        this.r = Math.sqrt(this.x ** 2 + this.y ** 2);
+        this.t = Math.atan2(this.y, this.x);
+        if (TouchRegionMin < r && r < TouchRegionMax) {
+            if (this.webPixelIds[1] >= 0) {
+                this.webPixelIds[0] = this.webPixelIds[1];
+                this.devPixelIds[0] = this.devPixelIds[1];
+            }
+            this.webPixelIds[1] = (Math.floor(t / WebPixelRad) + WebPixelLen) % WebPixelLen;
+            this.devPixelIds[1] = (Math.floor(t / DevPixelRad) + DevPixelLen) % DevPixelLen;
+        }
+        else {
+            this.webPixelIds = [undefined, undefined];
+            this.devPixelIds = [undefined, undefined];
+        }
+    }
+}
+
+class Pixel {
+    constructor(id, pixelLen, pixelRad) {
         this.id = id
-        this.startRad = this.id * frontendScale;
-        this.endRad = this.startRad + frontendScale;
+        this.pixelLen = pixelLen;
+        this.pixelRad = pixelRad;
+        this.startRad = this.id * this.pixelRad;
+        this.endRad = this.startRad + this.pixelRad;
         this.active = false;
     }
     run() {
@@ -71,16 +112,15 @@ class frontendNode {
         this.brightness = 0.8;
         this.alpha = this.brightness;
     }
-
     getColor() {
         this.color = 'rgba(' + this.hue + this.alpha + ')';
         return this.color;
     }
-    draw() {
+    draw(ctx) {
         if (this.active) {
             ctx.beginPath();
-            ctx.arc(canvasCenterX, canvasCenterY, heartRadiusMax, this.startRad, this.endRad);
-            ctx.lineTo(canvasCenterX, canvasCenterY);
+            ctx.arc(CanvasCenterX, CanvasCenterY, TouchRegionMax, this.startRad, this.endRad);
+            ctx.lineTo(CanvasCenterX, CanvasCenterY);
             ctx.closePath();
             ctx.fillStyle = this.getColor();
             ctx.fill();
@@ -101,50 +141,49 @@ class frontendNode {
     }
 }
 
-function runFrontendNodes() {
-    if (mouse.frontendIdNew >= 0) {
-        if (mouse.frontendIdOld >= 0) {
-            var diff = mouse.frontendIdNew - mouse.frontendIdOld;
-            diff = (diff + frontendPoints) % frontendPoints;
+function runCursoredPixel(pixelIds, pixels, pixelLen) {
+    if (pixelIds[1] >= 0) {
+        if (pixelIds[0] >= 0) {
+            var diff = pixelIds[1] - pixelIds[0];
+            diff = (diff + pixelLen) % pixelLen;
             var a = 2;
-            var b = frontendPoints / 4;
-            if (diff < a || diff > frontendPoints - a || (b < diff && diff < frontendPoints - b)) {
-                frontendNodes[mouse.frontendIdNew].run();
+            var b = pixelLen / 4;
+            if (diff < a || diff > pixelLen - a || (b < diff && diff < pixelLen - b)) {
+                pixels[pixelIds[1]].run();
             }
             else {
-                var s = diff < frontendPoints / 2 ? 1 : -1;
-                for (let i = mouse.frontendIdOld; i != mouse.frontendIdNew;) {
-                    i = (i + s + frontendPoints) % frontendPoints;
-                    frontendNodes[i].run();
+                var s = diff < pixelLen / 2 ? 1 : -1;
+                for (let i = pixelIds[0]; i != pixelIds[1];) {
+                    i = (i + s + pixelLen) % pixelLen;
+                    pixels[i].run();
                 }
             }
         }
         else {
-            frontendNodes[mouse.frontendIdNew].run();
+            pixels[pixelIds[1]].run();
         }
     }
 }
 
-
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     updateMouse(mouse.x, mouse.y);
-    runFrontendNodes();
+    runCursoredPixel();
     // f = ++f % 3;
     // if (f == 0) {
-    //     frontendNodes[n].run();
-    //     n = ++n % frontendPoints;
+    //     webPixels[n].run();
+    //     n = ++n % WebPixelLen;
     // }
-    for (let i = 0; i < frontendPoints; i++) {
-        frontendNodes[i].updata();
-        frontendNodes[i].draw();
+    for (let i = 0; i < WebPixelLen; i++) {
+        webPixels[i].updata();
+        webPixels[i].draw(ctx);
     }
     requestAnimationFrame(animate);
 }
 
 function init() {
-    for (let i = 0; i < frontendPoints; i++) {
-        frontendNodes.push(new frontendNode(i));
+    for (let i = 0; i < WebPixelLen; i++) {
+        webPixels.push(new Pixel(i, WebPixelLen, WebPixelRad));
     }
 }
 
