@@ -18,41 +18,6 @@ const TouchRegionMax = 150;
 
 var webPixels = [];
 
-var f = 0;
-var n = 0;
-
-const mouse = {
-    x: undefined,
-    y: undefined,
-    frontendIdOld: undefined,
-    frontendIdNew: undefined,
-    backendIdOld: undefined,
-    backendIdNew: undefined
-};
-img.addEventListener('touchmove', function (event) {
-    event.preventDefault();
-    mouse.x = event.touches[0].clientX - CanvasCenterPageX;
-    mouse.y = event.touches[0].clientY - CanvasCenterPageY;
-})
-function updateMouse(x, y) {
-    var r = Math.sqrt(x ** 2 + y ** 2);
-    var t = Math.atan2(y, x);
-    if (TouchRegionMin < r && r < TouchRegionMax) {
-        if (mouse.frontendIdNew) {
-            mouse.frontendIdOld = mouse.frontendIdNew;
-            mouse.backendIdOld = mouse.backendIdNew;
-        }
-        mouse.frontendIdNew = (Math.floor(t / WebPixelRad) + WebPixelLen) % WebPixelLen;
-        mouse.backendIdNew = (Math.floor(t / DevPixelRad) + DevPixelLen) % DevPixelLen;
-    }
-    else {
-        mouse.frontendIdOld = undefined;
-        mouse.frontendIdNew = undefined;
-        mouse.backendIdOld = undefined;
-        mouse.backendIdNew = undefined;
-    }
-}
-
 class Cursor {
     constructor() {
         // this.webPixelLen = webPixelLen;
@@ -112,7 +77,7 @@ class Pixel {
         this.color = 'rgba(' + this.hue + this.alpha + ')';
         return this.color;
     }
-    draw() {
+    draw(ctx) {
         if (this.active) {
             ctx.beginPath();
             ctx.arc(CanvasCenterX, CanvasCenterY, TouchRegionMax, this.startRad, this.endRad);
@@ -165,29 +130,20 @@ function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     cursor.updata();
     runCursoredPixel(cursor.webPixelIds, webPixels, WebPixelLen);
-    // f = ++f % 3;
-    // if (f == 0) {
-    //     webPixels[n].run();
-    //     n = ++n % WebPixelLen;
-    // }
     for (let i = 0; i < WebPixelLen; i++) {
         webPixels[i].updata();
-        webPixels[i].draw();
+        webPixels[i].draw(ctx);
     }
     requestAnimationFrame(animate);
 }
 
-function init() {
+window.onload = function(){
     for (let i = 0; i < WebPixelLen; i++) {
         webPixels.push(new Pixel(i, WebPixelLen, WebPixelRad));
     }
     cursor = new Cursor();
-    img.addEventListener('mousemove', function(event) {
-        cursor.x = event.x - CanvasCenterPageX;
-        cursor.y = event.y - CanvasCenterPageY;
-    });
+    img.addEventListener('mousemove', function (event) { cursor.handleMouse(event); });
+    img.addEventListener('touchmove', function (event) { cursor.handleTouch(event); });
+    animate();
 }
-
-init();
-animate();
 
