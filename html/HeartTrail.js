@@ -29,10 +29,6 @@ const mouse = {
     backendIdOld: undefined,
     backendIdNew: undefined
 };
-img.addEventListener('mousemove', function (event) {
-    mouse.x = event.x - CanvasCenterPageX;
-    mouse.y = event.y - CanvasCenterPageY;
-})
 img.addEventListener('touchmove', function (event) {
     event.preventDefault();
     mouse.x = event.touches[0].clientX - CanvasCenterPageX;
@@ -80,13 +76,13 @@ class Cursor {
     updata() {
         this.r = Math.sqrt(this.x ** 2 + this.y ** 2);
         this.t = Math.atan2(this.y, this.x);
-        if (TouchRegionMin < r && r < TouchRegionMax) {
+        if (TouchRegionMin < this.r && this.r < TouchRegionMax) {
             if (this.webPixelIds[1] >= 0) {
                 this.webPixelIds[0] = this.webPixelIds[1];
                 this.devPixelIds[0] = this.devPixelIds[1];
             }
-            this.webPixelIds[1] = (Math.floor(t / WebPixelRad) + WebPixelLen) % WebPixelLen;
-            this.devPixelIds[1] = (Math.floor(t / DevPixelRad) + DevPixelLen) % DevPixelLen;
+            this.webPixelIds[1] = (Math.floor(this.t / WebPixelRad) + WebPixelLen) % WebPixelLen;
+            this.devPixelIds[1] = (Math.floor(this.t / DevPixelRad) + DevPixelLen) % DevPixelLen;
         }
         else {
             this.webPixelIds = [undefined, undefined];
@@ -116,7 +112,7 @@ class Pixel {
         this.color = 'rgba(' + this.hue + this.alpha + ')';
         return this.color;
     }
-    draw(ctx) {
+    draw() {
         if (this.active) {
             ctx.beginPath();
             ctx.arc(CanvasCenterX, CanvasCenterY, TouchRegionMax, this.startRad, this.endRad);
@@ -167,8 +163,8 @@ function runCursoredPixel(pixelIds, pixels, pixelLen) {
 
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    updateMouse(mouse.x, mouse.y);
-    runCursoredPixel();
+    cursor.updata();
+    runCursoredPixel(cursor.webPixelIds, webPixels, WebPixelLen);
     // f = ++f % 3;
     // if (f == 0) {
     //     webPixels[n].run();
@@ -176,7 +172,7 @@ function animate() {
     // }
     for (let i = 0; i < WebPixelLen; i++) {
         webPixels[i].updata();
-        webPixels[i].draw(ctx);
+        webPixels[i].draw();
     }
     requestAnimationFrame(animate);
 }
@@ -185,7 +181,13 @@ function init() {
     for (let i = 0; i < WebPixelLen; i++) {
         webPixels.push(new Pixel(i, WebPixelLen, WebPixelRad));
     }
+    cursor = new Cursor();
+    img.addEventListener('mousemove', function(event) {
+        cursor.x = event.x - CanvasCenterPageX;
+        cursor.y = event.y - CanvasCenterPageY;
+    });
 }
 
 init();
 animate();
+
