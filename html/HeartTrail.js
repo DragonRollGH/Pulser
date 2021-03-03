@@ -110,46 +110,41 @@ class Pixel {
 function handleMouse(event) {
     function handlemove(event) {
         cursors[0].copy(event);
-        // cursors[0].x = event.pageX - CanvasCenterPageX;
-        // cursors[0].y = event.pageY - CanvasCenterPageY;
     }
     event.preventDefault();
     addEventListener('mousemove', handlemove);
     addEventListener('mouseup', function () {
         removeEventListener('mousemove', handlemove);
         cursors[0].clear();
-        // cursors[0].x = undefined;
-        // cursors[0].y = undefined;
     });
     handlemove(event);
 }
 
 function handleTouchStart(event) {
     event.preventDefault();
-    for (let i = 0; i < event.changedTouches.length; i++) {
-        cursors.push(new Cursor());
-        cursors[i + 1].copy(event.changedTouches[i]);     //cursors[0] = mouse;
+    for (let i in event.changedTouches) {
+        var cursor = new Cursor();
+        cursor.copy(event.changedTouches[i]);
+        cursors.push(cursor);
     }
 }
 
 function handleTouchMove(event) {
-    event.preventDefault();
-    for (let i = 0; i < event.changedTouches.length; i++) {
+    for (let i in event.changedTouches) {
         var idx = findCursor(event.changedTouches[i].identifier);
         cursors[idx].copy(event.changedTouches[i]);
     }
 }
 
 function handleTouchEnd(event) {
-    event.preventDefault();
-    for (let i = 0; i < event.changedTouches.length; i++) {
+    for (let i in event.changedTouches) {
         var idx = findCursor(event.changedTouches[i].identifier);
         cursors.splice(idx, 1);
     }
 }
 
 function findCursor(identifier) {
-    for (let i = 0; i < cursors.length; i++) {
+    for (let i in cursors) {
         if (cursors[i].identifier == identifier) {
             return i;
         }
@@ -183,13 +178,11 @@ function runCursoredPixel(pixelIds, pixels) {
 
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for(let i in cursors) {
+    for (let i in cursors) {
         cursors[i].updata()
         runCursoredPixel(cursors[i].webPixelIds, webPixels);
     }
-    // cursors[0].updata();
-    // runCursoredPixel(cursors[0].webPixelIds, webPixels);
-    for (let i = 0; i < WebPixelLen; i++) {
+    for (let i in webPixels) {
         webPixels[i].updata();
         webPixels[i].draw(ctx);
     }
