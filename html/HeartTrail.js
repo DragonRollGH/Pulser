@@ -17,28 +17,34 @@ const TouchRegionMin = 30;
 const TouchRegionMax = 150;
 
 var webPixels = [];
+var cursors = [];
 
 class Cursor {
     constructor() {
-        // this.webPixelLen = webPixelLen;
-        // this.webPixelRad = webPixelRad;
-        // this.devPixelLen = devPixelLen;
-        // this.devPixelRad = devPixelRad;
         this.x = undefined;
         this.y = undefined;
+        this.identifier = undefined;
         this.webPixelIds = [undefined, undefined];
         this.devPixelIds = [undefined, undefined];
     }
-    handleMouse(event) {
-        this.x = event.x - CanvasCenterPageX;
-        this.y = event.y - CanvasCenterPageY;
+    copy(cursor) {
+        this.x = cursor.pageX - CanvasCenterPageX;
+        this.y = cursor.pageY - CanvasCenterPageX;
+        this.identifier = cursor.identifier;
+        // if (cursor.identifier != undefined) {
+        // }
     }
-    handleTouch(event) {
-        event.preventDefault();
-        this.x = event.touches[0].pageX - CanvasCenterPageX;
-        this.y = event.touches[0].pageY - CanvasCenterPageY;
+    clear() {
+        this.x = undefined;
+        this.y = undefined;
+        this.identifier = undefined;
     }
     updata() {
+        if (this.x == undefined || this.y == undefined) {
+            this.webPixelIds = [undefined, undefined];
+            this.devPixelIds = [undefined, undefined];
+            return
+        }
         this.r = Math.sqrt(this.x ** 2 + this.y ** 2);
         this.t = Math.atan2(this.y, this.x);
         if (TouchRegionMin < this.r && this.r < TouchRegionMax) {
@@ -57,9 +63,8 @@ class Cursor {
 }
 
 class Pixel {
-    constructor(id, pixelLen, pixelRad) {
+    constructor(id, pixelRad) {
         this.id = id
-        this.pixelLen = pixelLen;
         this.pixelRad = pixelRad;
         this.startRad = this.id * this.pixelRad;
         this.endRad = this.startRad + this.pixelRad;
@@ -102,10 +107,60 @@ class Pixel {
     }
 }
 
-function runCursoredPixel(pixelIds, pixels, pixelLen) {
+function handleMouse(event) {
+    function handlemove(event) {
+        cursors[0].copy(event);
+        // cursors[0].x = event.pageX - CanvasCenterPageX;
+        // cursors[0].y = event.pageY - CanvasCenterPageY;
+    }
+    event.preventDefault();
+    addEventListener('mousemove', handlemove);
+    addEventListener('mouseup', function () {
+        removeEventListener('mousemove', handlemove);
+        cursors[0].clear();
+        // cursors[0].x = undefined;
+        // cursors[0].y = undefined;
+    });
+    handlemove(event);
+}
+
+function handleTouchStart(event) {
+    event.preventDefault();
+    for (let i = 0; i < event.changedTouches.length; i++) {
+        cursors.push(new Cursor());
+        cursors[i + 1].copy(event.changedTouches[i]);     //cursors[0] = mouse;
+    }
+}
+
+function handleTouchMove(event) {
+    event.preventDefault();
+    for (let i = 0; i < event.changedTouches.length; i++) {
+        var idx = findCursor(event.changedTouches[i].identifier);
+        cursors[idx].copy(event.changedTouches[i]);
+    }
+}
+
+function handleTouchEnd(event) {
+    event.preventDefault();
+    for (let i = 0; i < event.changedTouches.length; i++) {
+        var idx = findCursor(event.changedTouches[i].identifier);
+        cursors.splice(idx, 1);
+    }
+}
+
+function findCursor(identifier) {
+    for (let i = 0; i < cursors.length; i++) {
+        if (cursors[i].identifier == identifier) {
+            return i;
+        }
+    }
+}
+
+function runCursoredPixel(pixelIds, pixels) {
     if (pixelIds[1] >= 0) {
         if (pixelIds[0] >= 0) {
             var diff = pixelIds[1] - pixelIds[0];
+            var pixelLen = pixels.length;
             diff = (diff + pixelLen) % pixelLen;
             var a = 2;
             var b = pixelLen / 4;
@@ -128,8 +183,12 @@ function runCursoredPixel(pixelIds, pixels, pixelLen) {
 
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    cursor.updata();
-    runCursoredPixel(cursor.webPixelIds, webPixels, WebPixelLen);
+    for(let i in cursors) {
+        cursors[i].updata()
+        runCursoredPixel(cursors[i].webPixelIds, webPixels);
+    }
+    // cursors[0].updata();
+    // runCursoredPixel(cursors[0].webPixelIds, webPixels);
     for (let i = 0; i < WebPixelLen; i++) {
         webPixels[i].updata();
         webPixels[i].draw(ctx);
@@ -137,13 +196,15 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
-window.onload = function(){
+window.onload = function () {
     for (let i = 0; i < WebPixelLen; i++) {
-        webPixels.push(new Pixel(i, WebPixelLen, WebPixelRad));
+        webPixels.push(new Pixel(i, WebPixelRad));
     }
-    cursor = new Cursor();
-    img.addEventListener('mousemove', function (event) { cursor.handleMouse(event); });
-    img.addEventListener('touchmove', function (event) { cursor.handleTouch(event); });
+    cursors.push(new Cursor());
+    img.addEventListener('mousedown', handleMouse);
+    img.addEventListener('touchstart', handleTouchStart);
+    img.addEventListener('touchmove', handleTouchMove);
+    img.addEventListener('touchend', handleTouchEnd);
     animate();
 }
 
