@@ -9,6 +9,7 @@ var canvas = document.getElementById("Heart");
 var img = document.getElementById("Img");
 var ctx = canvas.getContext("2d");
 
+<<<<<<< HEAD
 const CanvasCenterX = canvas.width / 2;
 const CanvasCenterPageX = canvas.getBoundingClientRect().left + canvas.width / 2;
 const CanvasCenterY = canvas.height / 2;
@@ -18,6 +19,16 @@ const TouchRegionMax = 150;
 
 var webPixels = [];
 
+=======
+const canvasCenterX = canvas.width / 2;
+const pageCenterX = canvas.offsetLeft + canvasCenterX;
+const canvasCenterY = canvas.height / 2;
+const pageCenterY = canvas.offsetHeight + canvasCenterY;
+const heartRadiusMin = 30;
+const heartRadiusMax = 150;
+sdf
+var frontendNodes = [];
+>>>>>>> a4c09bc7c5faaafe4b7a69e8b3a63b9bce3259de
 var f = 0;
 var n = 0;
 
