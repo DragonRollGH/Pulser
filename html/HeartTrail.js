@@ -1,10 +1,3 @@
-const TWOPI = Math.PI * 2;
-
-const WebPixelLen = 60;          //页面的像素数
-const WebPixelRad = TWOPI / WebPixelLen;
-const DevPixelLen = 24;           //设备的像素数
-const DevPixelRad = TWOPI / DevPixelLen;
-
 var canvas = document.getElementById("Heart");
 var img = document.getElementById("Img");
 var ctx = canvas.getContext("2d");
@@ -13,11 +6,22 @@ const CanvasCenterX = canvas.width / 2;
 const CanvasCenterPageX = canvas.getBoundingClientRect().left + canvas.width / 2;
 const CanvasCenterY = canvas.height / 2;
 const CanvasCenterPageY = canvas.getBoundingClientRect().top + canvas.height / 2;
+
+const TWOPI = Math.PI * 2;
+
+const WebPixelLen = 60;          //页面的像素数
+const WebPixelRad = TWOPI / WebPixelLen;
+const DevPixelLen = 24;           //设备的像素数
+const DevPixelRad = TWOPI / DevPixelLen;
 const TouchRegionMin = 30;
 const TouchRegionMax = 150;
+const MqttStreamFrame = 60;
 
 var webPixels = [];
+var devPixels = [];
 var cursors = [];
+var mqttStream = [];
+var tick = 0;
 
 class Cursor {
     constructor() {
@@ -31,8 +35,6 @@ class Cursor {
         this.x = cursor.pageX - CanvasCenterPageX;
         this.y = cursor.pageY - CanvasCenterPageX;
         this.identifier = cursor.identifier;
-        // if (cursor.identifier != undefined) {
-        // }
     }
     clear() {
         this.x = undefined;
@@ -72,8 +74,8 @@ class Pixel {
     }
     run() {
         this.active = true;
-        this.liveTime = 20;
-        this.deadTime = 30;
+        this.liveTime = 5;
+        this.deadTime = 35;
         this.hue = '255,0,0,';
         this.brightness = 0.8;
         this.alpha = this.brightness;
@@ -181,10 +183,14 @@ function animate() {
     for (let i in cursors) {
         cursors[i].updata()
         runCursoredPixel(cursors[i].webPixelIds, webPixels);
+        runCursoredPixel(cursors[i].devPixelIds, devPixels);
     }
     for (let i in webPixels) {
         webPixels[i].updata();
         webPixels[i].draw(ctx);
+    }
+    for (let i in devPixels) {
+        devPixels[i].updata();
     }
     requestAnimationFrame(animate);
 }
@@ -192,6 +198,9 @@ function animate() {
 window.onload = function () {
     for (let i = 0; i < WebPixelLen; i++) {
         webPixels.push(new Pixel(i, WebPixelRad));
+    }
+    for (let i = 0; i < DevPixelLen; i++) {
+        devPixels.push(new Pixel(i, DevPixelRad));
     }
     cursors.push(new Cursor());
     img.addEventListener('mousedown', handleMouse);
