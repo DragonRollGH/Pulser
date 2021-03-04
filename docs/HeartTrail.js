@@ -180,6 +180,8 @@ function runCursoredPixel(pixelIds, pixels) {
 
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     for (let i in cursors) {
         cursors[i].updata()
         runCursoredPixel(cursors[i].webPixelIds, webPixels);
