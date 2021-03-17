@@ -9,9 +9,9 @@ const CanvasCenterPageY = canvas.getBoundingClientRect().top + canvas.height / 2
 
 const TWOPI = Math.PI * 2;
 
-const WebPixelLen = 60;          //页面的像素数
+const WebPixelLen = 200;          //页面的像素数
 const WebPixelRad = TWOPI / WebPixelLen;
-const DevPixelLen = 24;           //设备的像素数
+const DevPixelLen = 20;           //设备的像素数
 const DevPixelRad = TWOPI / DevPixelLen;
 const TouchRegionMin = 30;
 const TouchRegionMax = 150;
@@ -68,7 +68,7 @@ class Pixel {
     constructor(id, pixelRad) {
         this.id = id
         this.pixelRad = pixelRad;
-        this.startRad = this.id * this.pixelRad;
+        this.startRad = (this.id - 0.5) * this.pixelRad;
         this.endRad = this.startRad + this.pixelRad;
         this.active = false;
     }

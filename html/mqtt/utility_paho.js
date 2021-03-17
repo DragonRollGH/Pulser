@@ -1,9 +1,9 @@
 
-var passWord = "baidu IOT 的设备实例密码";
-var username = "设备实例用户名";
-var hostname = "XXXXX.mqtt.iot.gz.baidubce.com";  //替换成的你百度实例地址
-var port = "8884";    //使用WSS协议的接口地址
-var clientId = makeid();
+var passWord = "e6501f1b98c48378480bab53e5f3c8dc";
+var username = "thingidp@ajdnaud|WebTest|0|MD5";
+var hostname = "ajdnaud.iot.gz.baidubce.com";  //替换成的你百度实例地址
+var port = "443";    //使用WSS协议的接口地址
+var clientId = "WebTest";
 
 var connected = false;
 
@@ -34,7 +34,7 @@ options.password = passWord;
 client.connect(options);
 
 function subscribe() {
-    var topic = "mytopic01";
+    var topic = "Switch";
     var qos = 0;
     logMessage("INFO", "Subscribing to: [Topic: ", topic, ", QoS: ", qos, "]");
     client.subscribe(topic, { qos: Number(qos) });
@@ -42,7 +42,7 @@ function subscribe() {
 
 
 function publish(ledState) {
-    var topic = "mytopic01";
+    var topic = "Switch";
     var qos = 0;
     var message = ledState;
     var retain = false;
@@ -107,18 +107,6 @@ function onFail(context) {
     connected = false;
 
 }
-
-
-function makeid() {
-    var text = "";
-    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-    for (var i = 0; i < 15; i++)
-        text += possible.charAt(Math.floor(Math.random() * possible.length));
-
-    return text;
-}
-
 
 
 function logMessage(type, ...content) {
