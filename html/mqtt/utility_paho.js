@@ -47,7 +47,7 @@ function publish(ledState) {
     var message = ledState;
     var retain = false;
 
-    message = "{\"LED\":\"" + message + "\"} ";
+    message = "[{e";
 
     logMessage("INFO", "Publishing Message: [Topic: ", topic, ", Payload: ", message, ", QoS: ", qos, ", Retain: ", retain, "]");
     message = new Paho.MQTT.Message(message);
