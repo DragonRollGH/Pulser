@@ -11,7 +11,7 @@ const TWOPI = Math.PI * 2;
 
 const WebPixelLen = 200;          //页面的像素数
 const WebPixelRad = TWOPI / WebPixelLen;
-const DevPixelLen = 20;           //设备的像素数
+const DevPixelLen = 16;           //设备的像素数
 const DevPixelRad = TWOPI / DevPixelLen;
 const TouchRegionMin = 30;
 const TouchRegionMax = 150;
@@ -112,25 +112,6 @@ class Pixel {
     }
 }
 
-function hsv2rgb(h, s, v) {
-    var r, g, b;
-    var i = Math.round((h / 60) % 6);
-    var f = h / 60 - i;
-    var p = v * (1 - s);
-    var q = v * (1 - f * s);
-    var t = v * (1 - (1 - f) * s);
-    switch (i) {
-        case 0: r = v; g = t; b = p; break;
-        case 1: r = q; g = v; b = p; break;
-        case 2: r = p; g = v; b = t; break;
-        case 3: r = p; g = q; b = v; break;
-        case 4: r = t; g = p; b = v; break;
-        case 5: r = v; g = p; b = q; break;
-        default: break;
-    }
-    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
-}
-
 function handleMouse(event) {
     function handlemove(event) {
         cursors[0].copy(event);
@@ -202,8 +183,9 @@ function appendStream(devPixels) {
     if (streamTick == 0) {
         if (streamValid) {
             s = zip(streams.join(""))
-            console.log(s);
-            console.log(s.length)
+            // console.log(s);
+            // console.log(s.length)
+            console.log(streams.join(""))
         }
         streamValid = false;
         for (let i in streams) {
@@ -214,9 +196,7 @@ function appendStream(devPixels) {
         if (devPixels[i].active) {
             streamValid = true;
             rgb = devPixels[i].getDevColor();
-            for (let i in rgb) {
-                streams[streamTick] += String.fromCharCode(rgb[i])
-            }
+            for (let i in rgb) { streams[streamTick] += String.fromCharCode(rgb[i]) }
         } else {
             streams[streamTick] += "\x00\x00\x00";
         }
@@ -226,6 +206,25 @@ function appendStream(devPixels) {
 
 function PUBLISH(msg) {
     msg;
+}
+
+function hsv2rgb(h, s, v) {
+    var r, g, b;
+    var i = Math.round((h / 60) % 6);
+    var f = h / 60 - i;
+    var p = v * (1 - s);
+    var q = v * (1 - f * s);
+    var t = v * (1 - (1 - f) * s);
+    switch (i) {
+        case 0: r = v; g = t; b = p; break;
+        case 1: r = q; g = v; b = p; break;
+        case 2: r = p; g = v; b = t; break;
+        case 3: r = p; g = q; b = v; break;
+        case 4: r = t; g = p; b = v; break;
+        case 5: r = v; g = p; b = q; break;
+        default: break;
+    }
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
 
 function zip(s) {
