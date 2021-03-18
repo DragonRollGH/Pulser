@@ -1,0 +1,28 @@
+<script>
+    function zip(s) {
+        AzipStr = "";
+        Ap = "";     //Previous String
+        Acount = 0;
+        for (let i = 0; i < s.length; i += 4) {
+            Ac = s.substr(i, 4);     //Current String
+            if (Acount == 0xff) {
+                Acount = 0;
+                Ap = "";
+                AzipStr += "*ff";
+            }
+            if (Ac != Ap) {
+                if (Acount) {
+                    AzipStr += "*" + Acount.toString(16).padStart(2, "0");
+                    Acount = 0;
+                }
+                Ap = Ac;
+                AzipStr += Ac;
+            } else {
+                ++Acount;
+            }
+        }
+        if (Acount) { AzipStr += "*" + Acount.toString(16).padStart(2, "0"); }
+        return AzipStr;
+    }
+    zip("AAAAAAAAAAAABBBB");
+</script>

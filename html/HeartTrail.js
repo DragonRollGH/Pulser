@@ -201,8 +201,9 @@ function runCursoredPixel(pixelIds, pixels) {
 function appendStream(devPixels) {
     if (streamTick == 0) {
         if (streamValid) {
-            // PUBLISH(streams.join(""));
-            console.log(streams.join("\n"));
+            s = zip(streams.join(""))
+            console.log(s);
+            console.log(s.length)
         }
         streamValid = false;
         for (let i in streams) {
@@ -227,6 +228,32 @@ function PUBLISH(msg) {
     msg;
 }
 
+function zip(s) {
+    zipStr = "";
+    p = "";     //Previous String
+    count = 0;
+    for (let i = 0; i < s.length; i += 4) {
+        c = s.substr(i, 4);     //Current String
+        if (count == 0xff) {
+            count = 0;
+            p = "";
+            zipStr += "*ff";
+        }
+        if (c != p) {
+            if (count) {
+                zipStr += "*" + count.toString(16).padStart(2, "0");
+                count = 0;
+            }
+            p = c;
+            zipStr += c;
+        } else {
+            ++count;
+        }
+    }
+    if (count) { zipStr += "*" + count.toString(16).padStart(2, "0"); }
+    return zipStr;
+}
+
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "white";
@@ -248,7 +275,7 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
-window.onload = function () {
+onload = function () {
     for (let i = 0; i < WebPixelLen; i++) {
         webPixels.push(new Pixel(i, WebPixelRad));
     }
