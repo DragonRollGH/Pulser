@@ -1,9 +1,15 @@
 
-var passWord = "e6501f1b98c48378480bab53e5f3c8dc";
-var username = "thingidp@ajdnaud|WebTest|0|MD5";
-var hostname = "ajdnaud.iot.gz.baidubce.com";  //替换成的你百度实例地址
+// var passWord = "e6501f1b98c48378480bab53e5f3c8dc";
+// var username = "thingidp@ajdnaud|WebTest|0|MD5";
+// var hostname = "ajdnaud.iot.gz.baidubce.com";  //替换成的你百度实例地址
+// var port = "443";    //使用WSS协议的接口地址
+// var clientId = "WebTest";
+
+var passWord = "dc4e4a9497c5ada946e54ae789cf4882";
+var username = "thingidp@aidnaud|DragonRollEsp|0|MD5";
+var hostname = "aidnaud.iot.gz.baidubce.com";  //替换成的你百度实例地址
 var port = "443";    //使用WSS协议的接口地址
-var clientId = "WebTest";
+var clientId = "DragonRollEsp";
 
 var connected = false;
 

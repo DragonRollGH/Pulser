@@ -184,9 +184,9 @@ function appendStream(devPixels) {
         if (streamValid) {
             s = zip(streams.join(""))
             console.log(s);
-            console.log("***");
+            // console.log("***");
             // console.log(s.length)
-            console.log(streams.join(""));
+            // console.log(streams.join(""));
             console.log("********************");
         }
         streamValid = false;
