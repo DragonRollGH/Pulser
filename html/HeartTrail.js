@@ -1,3 +1,40 @@
+// import {client, publish} from 'mqtt/utility_paho.js'
+var passWord = "e6501f1b98c48378480bab53e5f3c8dc";
+var username = "thingidp@ajdnaud|WebTest";
+var hostname = "ajdnaud.iot.gz.baidubce.com";  //替换成的你百度实例地址
+var port = "443";    //使用WSS协议的接口地址
+var clientId = "WebTest";
+
+var client = new Paho.MQTT.Client(hostname, Number(port), "/mqtt", clientId);
+var options = {
+    invocationContext: { host: hostname, port: port, clientId: clientId },
+    timeout: 5,
+    keepAliveInterval: 60,
+    cleanSession: true,
+    useSSL: true,
+    //reconnect: true,
+    // onSuccess: onConnect,
+    // onFailure: onFail,
+    mqttVersion: 4
+};
+options.userName = username;
+options.password = passWord;
+client.connect(options);
+function publish(ledState) {
+    var topic = "Switch";
+    var qos = 0;
+    var message = ledState;
+    var retain = false;
+
+    // logMessage("INFO", "Publishing Message: [Topic: ", topic, ", Payload: ", message, ", QoS: ", qos, ", Retain: ", retain, "]");
+    message = new Paho.MQTT.Message(message);
+    message.destinationName = topic;
+    message.qos = Number(qos);
+    message.retained = retain;
+    client.send(message);
+}
+
+
 var canvas = document.getElementById("Heart");
 var img = document.getElementById("Img");
 var ctx = canvas.getContext("2d");
@@ -184,6 +221,7 @@ function appendStream(devPixels) {
         if (streamValid) {
             s = zip(streams.join(""))
             console.log(s);
+            publish(s);
             // console.log("***");
             // console.log(s.length)
             // console.log(streams.join(""));
@@ -206,9 +244,6 @@ function appendStream(devPixels) {
     streams[streamTick] = btoa(streams[streamTick]);
 }
 
-function PUBLISH(msg) {
-    msg;
-}
 
 function hsv2rgb(h, s, v) {
     var r, g, b;
