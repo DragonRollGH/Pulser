@@ -1,14 +1,17 @@
 <html>
 
 <head>
+    <title>Pulse Beeper</title>
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"
         charset="utf-8" />
-    <title>Pulse Beeper</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/css/bootstrap.min.css" integrity="sha384-Smlep5jCw/wG7hdkwQ/Z5nLIefveQRIY9nfy6xoR1uRYBtpZgI6339F5dgvm/e9B" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js" type="text/javascript"></script>
 </head>
 
 <body style="background-color:bisque;">
     <div style="position: absolute; z-index: 10;"><canvas id="Heart" width="300" height="300"></canvas></div>
     <div style="position: absolute; z-index: 20;"><img id="Img" src="Heart_v1.1.png" width="300" /></div>
     <script type="text/javascript" src="HeartTrail.js"></script>
+    <!-- <script src="mqtt/utility_paho.js"></script> -->
 </body>
