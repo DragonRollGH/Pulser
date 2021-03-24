@@ -1,9 +1,9 @@
 // import {client, publish} from 'mqtt/utility_paho.js'
-var passWord = "e6501f1b98c48378480bab53e5f3c8dc";
-var username = "thingidp@ajdnaud|WebTest";
+var passWord = "428428454a1b02b5f8cdc4159316f458";
+var username = "thingidp@ajdnaud|WebTest2";
 var hostname = "ajdnaud.iot.gz.baidubce.com";  //替换成的你百度实例地址
 var port = "443";    //使用WSS协议的接口地址
-var clientId = "WebTest";
+var clientId = "WebTest2";
 
 var client = new Paho.MQTT.Client(hostname, Number(port), "/mqtt", clientId);
 var options = {

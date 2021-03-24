@@ -6,13 +6,16 @@
 #include <PubSubClient.h>
 #include <WiFiManager.h>
 
-const byte PixelLen = 16;
+const byte PixelLen = 24;
 const byte Frame = 60;
 
 const char *mqtt_server = "ajdnaud.iot.gz.baidubce.com";
-const char *mqtt_clientid = "DragonRollEsp";
-const char *mqtt_user = "thingidp@ajdnaud|DragonRollEsp";
-const char *mqtt_passwd = "dc4e4a9497c5ada946e54ae789cf4882";
+ const char *mqtt_clientid = "DragonRollEsp";
+ const char *mqtt_user = "thingidp@ajdnaud|DragonRollEsp";
+ const char *mqtt_passwd = "dc4e4a9497c5ada946e54ae789cf4882";
+//const char *mqtt_clientid = "DragonRollEsp2";
+//const char *mqtt_user = "thingidp@ajdnaud|DragonRollEsp2";
+//const char *mqtt_passwd = "9cb80a11b9d6b9ab6cedf7e534328126";
 const char *topic_delta = "Switch";
 const char *topic_update = "Switch";
 
@@ -146,10 +149,11 @@ void loop()
         }
         SetPixelsColor(colorStr);
         setIdx = (setIdx + 1) % Frame;
-        if (!setIdx)
-        {
-            Pixel.ClearTo(RgbColor(0,0,0));
-            Pixel.Show();
-        }
+    }
+    else if (millis() - now >= 100)
+    {
+        Pixel.ClearTo(RgbColor(120,0,0));
+        Pixel.Show();
+        WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
     }
 }
