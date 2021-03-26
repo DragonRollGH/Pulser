@@ -10,8 +10,11 @@
 </head>
 
 <body style="background-color:bisque;">
-    <div style="position: absolute; z-index: 10;"><canvas id="Heart" width="300" height="300"></canvas></div>
-    <div style="position: absolute; z-index: 20;"><img id="Img" src="Heart_v1.1.png" width="300" /></div>
-    <script type="text/javascript" src="HeartTrail.js"></script>
+    <div id="Body" style="text-align: center; height: 600;">
+        <br><br>
+        <div style="position: absolute; left: 0; right: 0;"><img id="Img" src="Heart_v0.png" width="300" /></div>
+        <div style="left: 0; right: 0;"><canvas id="Heart" width="300" height="300"></canvas></div>
+    </div>
+    <script src="HeartTrail.js"></script>
     <!-- <script src="mqtt/utility_paho.js"></script> -->
 </body>

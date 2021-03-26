@@ -36,13 +36,14 @@ function publish(ledState) {
 
 
 var canvas = document.getElementById("Heart");
+var body = document.getElementById("Body");
 var img = document.getElementById("Img");
 var ctx = canvas.getContext("2d");
 
 const CanvasCenterX = canvas.width / 2;
-const CanvasCenterPageX = canvas.getBoundingClientRect().left + canvas.width / 2;
+const CanvasCenterPageX = canvas.getBoundingClientRect().left + CanvasCenterX;
 const CanvasCenterY = canvas.height / 2;
-const CanvasCenterPageY = canvas.getBoundingClientRect().top + canvas.height / 2;
+const CanvasCenterPageY = canvas.getBoundingClientRect().top + CanvasCenterY;
 
 const TWOPI = Math.PI * 2;
 
@@ -71,7 +72,7 @@ class Cursor {
     }
     copy(cursor) {
         this.x = cursor.pageX - CanvasCenterPageX;
-        this.y = cursor.pageY - CanvasCenterPageX;
+        this.y = cursor.pageY - CanvasCenterPageY;
         this.identifier = cursor.identifier;
     }
     clear() {
@@ -326,6 +327,7 @@ onload = function () {
     img.addEventListener('touchstart', handleTouchStart);
     img.addEventListener('touchmove', handleTouchMove);
     img.addEventListener('touchend', handleTouchEnd);
+    body.addEventListener('mousedown',function(e){e.preventDefault()})
     animate();
 }
 
