@@ -2,37 +2,81 @@
 #include <DNSServer.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
+#include <ESP8266HTTPClient.h>
+#include <ESP8266httpUpdate.h>
 #include <NeoPixelBus.h>
 #include <PubSubClient.h>
 #include <WiFiManager.h>
 
-const byte PixelLen = 24;
-const byte Frame = 60;
+const byte PixelLen = 20;
+const byte FrameRate = 17; // =1000ms/60fps
+const byte SleepRun = 1;
+const byte SleepIdle = 100;
 
 const char *mqtt_server = "ajdnaud.iot.gz.baidubce.com";
- const char *mqtt_clientid = "DragonRollEsp";
- const char *mqtt_user = "thingidp@ajdnaud|DragonRollEsp";
- const char *mqtt_passwd = "dc4e4a9497c5ada946e54ae789cf4882";
+const char *mqtt_clientid = "DragonRollEsp";
+const char *mqtt_user = "thingidp@ajdnaud|DragonRollEsp";
+const char *mqtt_passwd = "dc4e4a9497c5ada946e54ae789cf4882";
 //const char *mqtt_clientid = "DragonRollEsp2";
 //const char *mqtt_user = "thingidp@ajdnaud|DragonRollEsp2";
 //const char *mqtt_passwd = "9cb80a11b9d6b9ab6cedf7e534328126";
 const char *topic_delta = "Switch";
 const char *topic_update = "Switch";
 
-// unsigned char buffer[] = "AAAA*0dzAAAAAAA*0bzAAA*03AAAA*09zAAA*05AAAA*09zAAA*05AAAA*08zAAA*06AAAA*08zAAA*05xgAAAAAA*08zAAA*02xgAA*02wAAAAAAA*08zAAA*01xgAAwAAA*02uwAAAAAA*08zAAAxgAAwAAAuwAA*02tQAAAAAA*08zAAAwAAAuwAAtQAA*02rwAAAAAA*08zAAAuwAAtQAArwAA*02qQAAzAAAAAAA*07zAAAtQAArwAAqQAA*02owAAzAAAAAAA*07zAAArwAAqQAAowAA*02nQAAzAAAAAAA*07xgAAqQAAowAAnQAA*02mAAAzAAAAAAA*07wAAAowAAnQAAmAAA*02zAAA*01AAAA*07uwAAzAAAmAAAkgAA*02zAAA*01AAAA*07zAAA*01kgAAjAAA*02zAAA*01AAAA*07zAAA*01jAAAhgAA*02zAAA*01AAAA*06zAAA*02hgAAgAAA*02zAAAxgAAAAAA*06zAAA*02gAAAegAA*02xgAAwAAAzAAAAAAA*05zAAA*01xgAAegAAdQAA*02wAAAuwAAzAAAAAAA*05zAAA*01wAAAdQAAbwAA*02uwAAtQAAzAAAAAAA*05zAAAxgAAuwAAbwAAaQAA*02tQAArwAAzAAAAAAA*05xgAAwAAAtQAAaQAAYwAA*02rwAAqQAAzAAA*01AAAA*04wAAAuwAArwAAYwAAXQAA*02qQAAowAAxgAAzAAA*04AAAAuwAAtQAAqQAAXQAAVwAA*02owAAnQAAwAAAzAAA*06rwAAowAAVwAAUgAA*02nQAAmAAAuwAAzAAA*06qQAAnQAAUgAATAAA*02mAAAkgAAtQAAzAAA*06owAAmAAATAAARgAA*02kgAAjAAArwAAxgAAzAAA*05nQAAkgAARgAAQAAA*02jAAAhgAAqQAAwAAAxgAAzAAA*04mAAAjAAAQAAAOgAA*02hgAAgAAAowAAuwAAzAAA*05kgAAhgAAOgAANAAA*02gAAAegAAnQAAtQAAzAAA*05jAAAgAAANAAALwAA*02egAAdQAAmAAArwAAzAAA*04xgAAhgAAegAALwAAKQAA*02dQAAbwAAkgAAqQAAzAAA*03xgAAwAAAgAAAdQAAKQAAIwAA*02bwAAaQAAjAAAowAAzAAA*02xgAAwAAAuwAAegAAbwAAIwAAHQAA*02aQAAYwAAhgAAnQAAzAAA*03uwAAtQAAdQAAaQAAHQAAFwAA*02YwAAXQAAgAAAmAAAzAAA*03tQAArwAAbwAAYwAAFwAAEQAA*02XQAAVwAAegAAkgAAxgAAzAAA*02rwAAqQAAaQAAXQAAEQAADAAA*02VwAAUgAAdQAAjAAAwAAAxgAAzAAA*01qQAAowAAYwAAVwAADAAABgAA*02UgAATAAAbwAAhgAAuwAAwAAAxgAAzAAAowAAnQAAXQAAUgAABgAAAAAA*02TAAARgAAaQAAgAAAtQAAuwAAwAAAzAAAnQAAmAAAVwAATAAAAAAA*03RgAAQAAAYwAAegAArwAAtQAAuwAAxgAAmAAAkgAAUgAARgAAAAAA*03QAAAOgAAXQAAdQAAqQAArwAAtQAAwAAAkgAAjAAATAAAQAAAAAAA*03OgAANAAAVwAAbwAAowAAqQAArwAAuwAAjAAAhgAARgAAOgAAAAAA*03NAAALwAAUgAAaQAAnQAAowAAqQAAtQAAhgAAgAAAQAAANAAAAAAA*03LwAAKQAATAAAYwAAmAAAnQAAowAArwAAgAAAegAAOgAALwAAAAAA*03KQAAIwAARgAAXQAAkgAAmAAAnQAAqQAAegAAdQAANAAAKQAAAAAA*03IwAAHQAAQAAAVwAAjAAAkgAAmAAAowAAdQAAbwAALwAAIwAAAAAA*03HQAAFwAAOgAAUgAAhgAAjAAAkgAAnQAAbwAAaQAAKQAAHQAAAAAA*03FwAAEQAANAAATAAAgAAAhgAAjAAAmAAAaQAAYwAAIwAAFwAAAAAA*03EQAADAAALwAARgAAegAAgAAAhgAAkgAAYwAAXQAAHQAAEQAAAAAA*03DAAABgAAKQAAQAAAdQAAegAAgAAAjAAAXQAAVwAAFwAADAAAAAAA*03BgAAAAAAIwAAOgAAbwAAdQAAegAAhgAAVwAAUgAAEQAABgAAAAAA*05HQAANAAAaQAAbwAAdQAAgAAAUgAATAAADAAAAAAA*06FwAALwAAYwAAaQAAbwAAegAATAAARgAABgAAAAAA*06EQAAKQAAXQAAYwAAaQAAdQAARgAAQAAAAAAA*07DAAAIwAAVwAAXQAAYwAAbwAAQAAAOgAAAAAA*07BgAAHQAAUgAAVwAAXQAAaQAAOgAANAAAAAAA*08FwAATAAAUgAAVwAAYwAANAAALwAAAAAA*07";
-
-bool isReceive = 0;
-byte setIdx = 0;
+bool isCmd = 0;
+bool isFlow = 0;
+byte sleep = 0;
+unsigned long cache = PixelLen * 4 * 20;
 unsigned long now = millis();
 
-// unsigned char *buffer;
-// unsigned int bufferLen;
-unsigned char unzipStr[4 * PixelLen * Frame];
+String cmdArg;
 
 WiFiClient WC;
 WiFiManager WM;
 PubSubClient MQTT(WC);
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> Pixel(PixelLen);
+
+class ByteStream
+{
+public:
+    unsigned int buffer = 4800;
+    unsigned int wi = 0;
+    unsigned int ri = 0;
+    unsigned int avalible = 0;
+    byte stream[buffer];
+
+    void write(byte w)
+    {
+        if (avalible <= buffer)
+        {
+            stream[wi] = w;
+            wi = (wi + 1) % buffer;
+            ++avalible;
+        }
+    }
+
+    byte read(void)
+    {
+        if (avalible == 0)
+        {
+            return '\0';
+        }
+        else
+        {
+            ri = (ri + 1) % buffer;
+            --avalible;
+            return stream[ri - 1];
+        }
+    }
+
+    void undo(unsigned int ui)
+    {
+        wi = (wi + buffer - ui) % buffer;
+        avalible -= ui;
+    }
+};
+
+ByteStream BS;
 
 void mqtt_callback(const char *topic, byte *payload, unsigned int length)
 {
@@ -41,10 +85,59 @@ void mqtt_callback(const char *topic, byte *payload, unsigned int length)
     Serial.print("] ");
     Serial.println();
 
-    Unzip(unzipStr, payload, length);
-    setIdx = Frame;
-    // buffer = payload;
-    // bufferLen = length;
+    if (payload[0] == ':')
+    {
+        isCmd = 1;
+        cmdArg = "";
+        for (byte i = 1; i < length; i++)
+        {
+            cmdArg += (char)payload[i]
+        }
+    }
+    else
+    {
+        Unzip(payload, length)
+    }
+}
+// else
+// {
+//     Unzip(unzipStr, payload, length);
+//     arrIdx = Frame;
+// }
+// }
+
+void ConnectMQTT(void)
+{
+    MQTT.connect(mqtt_clientid, mqtt_user, mqtt_passwd);
+    MQTT.subscribe(topic_delta);
+    Serial.println("Baidu IoT connected");
+}
+
+void cmdUpdate(String cmdArg)
+{
+    String url = "https://github.com/DragonRollGH/PulseBeeper/raw/main/arduino/latest.bin";
+    if (cmdArg.length >= 1)
+    // if (cmdArg.substring(1,7) == "http://")
+    {
+        url = cmdArg.substring(1);
+    }
+    Serial.println("Starting update from" + url);
+    ESPhttpUpdate.setLedPin(LED_BUILTIN, LOW);
+    t_httpUpdate_return ret = ESPhttpUpdate.update(url);
+    switch (ret)
+    {
+    case HTTP_UPDATE_FAILED:
+        Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+        break;
+
+    case HTTP_UPDATE_NO_UPDATES:
+        Serial.println("HTTP_UPDATE_NO_UPDATES");
+        break;
+
+    case HTTP_UPDATE_OK:
+        Serial.println("HTTP_UPDATE_OK");
+        break;
+    }
 }
 
 byte Hex2Byte(unsigned char H, unsigned char L)
@@ -70,44 +163,106 @@ byte Hex2Byte(unsigned char H, unsigned char L)
     return b;
 }
 
-void Unzip(unsigned char *unzipStr, unsigned char *zipStr, unsigned int length)
+// void Unzip(unsigned char *unzipStr, unsigned char *zipStr, unsigned int length)
+// {
+//     unsigned int zipIdx, unzipIdx = 0;
+//     for (zipIdx = 0; zipIdx < length; zipIdx++)
+//     {
+//         if (zipStr[zipIdx] == '*')
+//         {
+//             byte count = Hex2Byte(zipStr[zipIdx + 1], zipStr[zipIdx + 2]);
+//             zipIdx += 2;
+//             for (byte i = 0; i < count; i++)
+//             {
+//                 for (byte j = 6; j > 2; j--)
+//                 {
+//                     unzipStr[unzipIdx++] = zipStr[zipIdx - j];
+//                 }
+//             }
+//         }
+//         else
+//         {
+//             unzipStr[unzipIdx++] = zipStr[zipIdx];
+//         }
+//     }
+// }
+
+void Unzip(byte *payload, unsigned int length)
 {
-    unsigned int zipIdx, unzipIdx = 0;
-    for (zipIdx = 0; zipIdx < length; zipIdx++)
+    byte zipWindow = 4;
+    unsigned int validation = 0;
+    for (unsigned int p = 0; p < length; p++)
     {
-        if (zipStr[zipIdx] == '*')
+        if (buffer[p] == '*')
         {
-            byte count = Hex2Byte(zipStr[zipIdx + 1], zipStr[zipIdx + 2]);
-            zipIdx += 2;
+            byte count = Hex2Byte(buffer[p + 1], buffer[p + 2]);
+            p += 2;
             for (byte i = 0; i < count; i++)
             {
-                for (byte j = 6; j > 2; j--)
+                for (byte j = zipWindow + 2; j > 2; j--)
                 {
-                    unzipStr[unzipIdx++] = zipStr[zipIdx - j];
+                    BS.write(buffer[p - j]);
+                    ++validation;
                 }
             }
         }
         else
         {
-            unzipStr[unzipIdx++] = zipStr[zipIdx];
+            BS.write(buffer[p]);
+            ++validation;
         }
+    }
+    if (validation % (PixelLen * 4) != 0)
+    {
+        BS.undo(validation);
     }
 }
 
-void SetPixelsColor(unsigned char *colorStr)
+// void SetPixelsColor(unsigned char *colorStr)
+// {
+//     unsigned char colorList[PixelLen * 3];
+//     decode_base64(colorStr, colorList);
+//     for (byte i = 0; i < PixelLen; i++)
+//     {
+//         Serial.print(i);
+//         Serial.print(": ");
+//         Serial.print(colorList[i * 3]);
+//         Serial.print("|");
+//         Pixel.SetPixelColor(i, RgbColor(colorList[i * 3], colorList[i * 3 + 1], colorList[i * 3 + 2]));
+//     }
+//     Serial.println("");
+//     Pixel.Show();
+// }
+
+void SetPixelsColor(void)
 {
-    unsigned char colorList[PixelLen * 3];
-    decode_base64(colorStr, colorList);
-    for (byte i = 0; i < PixelLen; i++)
+    if (BS.avalible >= PixelLen * 4)
     {
-        Serial.print(i);
-        Serial.print(": ");
-        Serial.print(colorList[i * 3]);
-        Serial.print("|");
-        Pixel.SetPixelColor(i, RgbColor(colorList[i * 3], colorList[i * 3 + 1], colorList[i * 3 + 2]));
+        byte arry[PixelLen * 3];
+        byte base[PixelLen * 4];
+        for (byte i = 0; i < PixelLen * 4; i++)
+        {
+            base[i] = BS.read();
+        }
+        decode_base64(base, arry);
+        for (byte i = 0; i < PixelLen; i++)
+        {
+            Serial.print(i);
+            Serial.print(": ");
+            Serial.print(arry[i * 3]);
+            Serial.print("|");
+            Pixel.SetPixelColor(i, RgbColor(arry[i * 3], arry[i * 3 + 1], arry[i * 3 + 2]));
+        }
+        Serial.println("");
+        Pixel.Show();
     }
-    Serial.println("");
-    Pixel.Show();
+    else
+    {
+        isFlow = 0;
+        sleep = SleepIdle;
+        Pixel.ClearTo(RgbColor(0, 0, 0));
+        Pixel.Show();
+    }
 }
 
 void setup()
@@ -115,12 +270,13 @@ void setup()
     Serial.begin(115200);
 
     WiFi.mode(WIFI_STA);
+    WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
 
     WM.autoConnect("PulseBeeper");
 
     MQTT.setServer(mqtt_server, 1883);
     MQTT.setCallback(mqtt_callback);
-    MQTT.setBufferSize(4096);
+    MQTT.setBufferSize(4800);
 
     Pixel.Begin();
 
@@ -131,29 +287,38 @@ void loop()
 {
     if (!MQTT.connected())
     {
-        MQTT.connect(mqtt_clientid, mqtt_user, mqtt_passwd);
-        MQTT.subscribe(topic_delta);
-        Serial.println("Baidu IoT connected");
+        ConnectMQTT();
     }
     MQTT.loop();
 
-    if (setIdx && millis() - now >= 17)
+    if (isFlow)
     {
-        now = millis();
-        setIdx %= Frame;
-        // if(setIdx == Frame+1) { setIdx = 0; }
-        unsigned char colorStr[PixelLen * 4];
-        for (byte j = 0; j < PixelLen * 4; j++)
+        if (millis() - now >= FrameRate)
         {
-            colorStr[j] = unzipStr[setIdx * PixelLen * 4 + j];
+            now = millis();
+            SetPixelsColor();
         }
-        SetPixelsColor(colorStr);
-        setIdx = (setIdx + 1) % Frame;
     }
-    else if (millis() - now >= 100)
+    else if (isCmd)
     {
-        Pixel.ClearTo(RgbColor(120,0,0));
-        Pixel.Show();
-        WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
+        isCmd = 0;
+        switch (cmdArg[0])
+        {
+        case 'a':
+            cmdUpdate(cmdArg);
+            break;
+        default:
+            Serial.println("Unknown command.")
+        }
     }
+    else
+    {
+        if (BS.avalible >= cache)
+        {
+            isFlow = 1;
+            sleep = SleepRun;
+        }
+    }
+
+    delay(sleep);
 }
