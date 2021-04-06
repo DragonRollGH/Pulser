@@ -311,10 +311,16 @@ void runFlow(void)
     sleep = SleepRun;
 }
 
+void stopFlow(void)
+{
+    flowStart = 0;
+    sleep = SleepIdle;
+}
+
 void setPixelsColor(void)
 {
     bool running = 1;
-    while (running)
+    while (BS.avalible && running)
     {
         switch (BS.read())
         {
@@ -356,50 +362,53 @@ void setPixelsColor(void)
             break;
         }
     }
-}
-
-void showPixelsColor(void)
-{
+    running = 0;
     for (byte i = 0; i < PixelLen; i++)
     {
         if (pixels[i].active)
         {
             heart.SetPixelColor(i, HslColor(pixels[i].H, pixels[i].S, pixels[i].L));
+            running = 1;
         }
         else
         {
-            heart.SetPixelColor(i, HslColor(0,0,0));
+            heart.SetPixelColor(i, HslColor(0, 0, 0));
         }
         pixels[i].update();
     }
     heart.Show();
+    if (!running)
+    {
+        stopFlow();
+    }
 }
-    // if (BS.read() == '?')
-    // {
-    //     byte arry[PixelLen * 3];
-    //     byte base[PixelLen * 4];
-    //     for (byte i = 0; i < PixelLen * 4; i++)
-    //     {
-    //         base[i] = BS.read();
-    //     }
-    //     decode_base64(base, arry);
-    //     for (byte i = 0; i < PixelLen; i++)
-    //     {
-    //         Serial.print(i);
-    //         Serial.print(": ");
-    //         Serial.print(arry[i * 3]);
-    //         Serial.print("|");
-    //         heart.SetPixelColor(i, RgbColor(arry[i * 3], arry[i * 3 + 1], arry[i * 3 + 2]));
-    //     }
-    //     Serial.println("");
-    //     heart.Show();
-    // }
-    // else
-    // {
-    //     sleep = SleepIdle;
-    //     heart.ClearTo(RgbColor(0, 0, 0));
-    //     heart.Show();
-    // }
+
+// if (BS.read() == '?')
+// {
+//     byte arry[PixelLen * 3];
+//     byte base[PixelLen * 4];
+//     for (byte i = 0; i < PixelLen * 4; i++)
+//     {
+//         base[i] = BS.read();
+//     }
+//     decode_base64(base, arry);
+//     for (byte i = 0; i < PixelLen; i++)
+//     {
+//         Serial.print(i);
+//         Serial.print(": ");
+//         Serial.print(arry[i * 3]);
+//         Serial.print("|");
+//         heart.SetPixelColor(i, RgbColor(arry[i * 3], arry[i * 3 + 1], arry[i * 3 + 2]));
+//     }
+//     Serial.println("");
+//     heart.Show();
+// }
+// else
+// {
+//     sleep = SleepIdle;
+//     heart.ClearTo(RgbColor(0, 0, 0));
+//     heart.Show();
+// }
 
 void setup()
 {
