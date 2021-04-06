@@ -60,7 +60,7 @@ public:
     float deltaL;
     byte A;
 
-    void running(byte rH, byte rS, byte rL, byte rA, byte rB)
+    void run(byte rH, byte rS, byte rL, byte rA, byte rB)
     {
         active = true;
         H = rH / 255.0f;
@@ -225,7 +225,6 @@ void cmdUpdate(String &paylaod)
     }
 }
 
-
 byte toByte(byte H, byte L)
 {
     byte bH, bL, b;
@@ -248,7 +247,6 @@ byte toByte(byte H, byte L)
     b = bH + bL;
     return b;
 }
-
 
 void Unzip(byte *payload, unsigned int length)
 {
@@ -281,17 +279,19 @@ void Unzip(byte *payload, unsigned int length)
     }
 }
 
-void runFlow(void)
+void runPixels(byte b1, byte b2, byte b3, byte b4)
 {
-    flowFrame = 1;
-    flowStart = millis();
-    sleep = SleepRun;
-}
-
-void stopFlow(void)
-{
-    flowStart = 0;
-    sleep = SleepIdle;
+    byte *base = {b1, b2, b3, b4};
+    byte *arry[3];
+    decode_base64(base, arry);
+    for (byte i = 0; i < PixelLen; i++)
+    {
+        if (arry[i / 8] & 128)
+        {
+            pixels[i].run(H, S, L, A, B);
+        }
+        arry[i / 8] <<= 1;
+    }
 }
 
 void setPixelsColor(void)
@@ -327,7 +327,7 @@ void setPixelsColor(void)
                 setHSL(BS.read(), BS.read(), BS.read(), BS.read());
                 break;
             case 'N':
-                runPixel(BS.read(), BS.read(), BS.read(), BS.read());
+                runPixels(BS.read(), BS.read(), BS.read(), BS.read());
                 break;
             default:
                 break;
@@ -387,6 +387,19 @@ void setPixelsColor(void)
 //     heart.ClearTo(RgbColor(0, 0, 0));
 //     heart.Show();
 // }
+
+void runFlow(void)
+{
+    flowFrame = 1;
+    flowStart = millis();
+    sleep = SleepRun;
+}
+
+void stopFlow(void)
+{
+    flowStart = 0;
+    sleep = SleepIdle;
+}
 
 void setup()
 {
