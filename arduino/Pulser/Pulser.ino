@@ -24,12 +24,20 @@ const char *AP_SSID = "Rolls_Pulser";
 // const char *MQTTPub = "";
 
 
-byte H = 0;
-byte S = 255;
-byte L = 50;
-byte live = 5;
-byte dead = 35;
+byte dH = 0;
+byte dS = 255;
+byte dL = 50;
+byte dA = 5;
+byte dB = 35;
+
+byte H = dH;
+byte S = dS;
+byte L = dL;
+byte A = dA;
+byte B = dB;
+
 byte sleep = 0;
+
 unsigned long cache = PixelLen * 4 * 20;
 unsigned long now = millis();
 unsigned long flowStart;
@@ -40,7 +48,7 @@ MQTTClient MQTT(1024);
 
 WiFiManager WM;
 
-NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> Pixel(PixelLen);
+NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> heart(PixelLen);
 
 class Pixel
 {
@@ -50,25 +58,25 @@ public:
     float S;
     float L;
     float deltaL;
-    byte live;
+    byte A;
 
-    void run(byte rH, byte rS, byte rL, byte rlive, byte rdead)
+    void running(byte rH, byte rS, byte rL, byte rA, byte rB)
     {
         active = true;
         H = rH / 255.0f;
         S = rS / 255.0f;
         L = rL / 255.0f;
-        deltaL = L / rdead;
-        live = rlive;
+        A = rA;
+        deltaL = L / rB;
     }
 
     void update(void)
     {
         if (active)
         {
-            if (live)
+            if (A)
             {
-                live -= 1;
+                A -= 1;
             }
             else if (L > 0)
             {
@@ -81,6 +89,7 @@ public:
         }
     }
 };
+Pixel pixels[PixelLen];
 
 class ByteStream
 {
@@ -302,32 +311,19 @@ void runFlow(void)
     sleep = SleepRun;
 }
 
-// void SetPixelsColor(unsigned char *colorStr)
-// {
-//     unsigned char colorList[PixelLen * 3];
-//     decode_base64(colorStr, colorList);
-//     for (byte i = 0; i < PixelLen; i++)
-//     {
-//         Serial.print(i);
-//         Serial.print(": ");
-//         Serial.print(colorList[i * 3]);
-//         Serial.print("|");
-//         Pixel.SetPixelColor(i, RgbColor(colorList[i * 3], colorList[i * 3 + 1], colorList[i * 3 + 2]));
-//     }
-//     Serial.println("");
-//     Pixel.Show();
-// }
-
-void SetPixelsColor(void)
+void setPixelsColor(void)
 {
-    bool a = 1;
-    while (a)
+    bool running = 1;
+    while (running)
     {
         switch (BS.read())
         {
         case '&':
             switch (BS.read())
             {
+            case 'D':
+                useDefault();
+                break;
             case 'H':
                 H = toByte(BS.read(), BS.read());
                 break;
@@ -337,11 +333,11 @@ void SetPixelsColor(void)
             case 'L':
                 L = toByte(BS.read(), BS.read());
                 break;
-            case 'l':
-                live = toByte(BS.read(), BS.read());
+            case 'A':
+                A = toByte(BS.read(), BS.read());
                 break;
-            case 'd':
-                dead = toByte(BS.read(), BS.read());
+            case 'B':
+                B = toByte(BS.read(), BS.read());
                 break;
             case 'C':
                 setHSL(BS.read(), BS.read(), BS.read(), BS.read());
@@ -354,39 +350,56 @@ void SetPixelsColor(void)
             }
             break;
         case ';':
-            a = 0;
+            running = 0;
             break;
         default:
             break;
         }
     }
-    if (BS.read() == '?')
-    {
-        byte arry[PixelLen * 3];
-        byte base[PixelLen * 4];
-        for (byte i = 0; i < PixelLen * 4; i++)
-        {
-            base[i] = BS.read();
-        }
-        decode_base64(base, arry);
-        for (byte i = 0; i < PixelLen; i++)
-        {
-            Serial.print(i);
-            Serial.print(": ");
-            Serial.print(arry[i * 3]);
-            Serial.print("|");
-            Pixel.SetPixelColor(i, RgbColor(arry[i * 3], arry[i * 3 + 1], arry[i * 3 + 2]));
-        }
-        Serial.println("");
-        Pixel.Show();
-    }
-    else
-    {
-        sleep = SleepIdle;
-        Pixel.ClearTo(RgbColor(0, 0, 0));
-        Pixel.Show();
-    }
 }
+
+void showPixelsColor(void)
+{
+    for (byte i = 0; i < PixelLen; i++)
+    {
+        if (pixels[i].active)
+        {
+            heart.SetPixelColor(i, HslColor(pixels[i].H, pixels[i].S, pixels[i].L));
+        }
+        else
+        {
+            heart.SetPixelColor(i, HslColor(0,0,0));
+        }
+        pixels[i].update();
+    }
+    heart.Show();
+}
+    // if (BS.read() == '?')
+    // {
+    //     byte arry[PixelLen * 3];
+    //     byte base[PixelLen * 4];
+    //     for (byte i = 0; i < PixelLen * 4; i++)
+    //     {
+    //         base[i] = BS.read();
+    //     }
+    //     decode_base64(base, arry);
+    //     for (byte i = 0; i < PixelLen; i++)
+    //     {
+    //         Serial.print(i);
+    //         Serial.print(": ");
+    //         Serial.print(arry[i * 3]);
+    //         Serial.print("|");
+    //         heart.SetPixelColor(i, RgbColor(arry[i * 3], arry[i * 3 + 1], arry[i * 3 + 2]));
+    //     }
+    //     Serial.println("");
+    //     heart.Show();
+    // }
+    // else
+    // {
+    //     sleep = SleepIdle;
+    //     heart.ClearTo(RgbColor(0, 0, 0));
+    //     heart.Show();
+    // }
 
 void setup()
 {
@@ -400,7 +413,7 @@ void setup()
     MQTT.begin(MQTTServer, MQTTPort, WLAN);
     MQTT.onMessage(mqttMsg);
 
-    Pixel.Begin();
+    heart.Begin();
 
     Serial.println("\nESP OK");
 }
@@ -418,7 +431,8 @@ void loop()
         if (millis() - flowStart >= flowFrame * FrameRate)
         {
             ++flowFrame;
-            SetPixelsColor();
+            setPixelsColor();
+            showPixelsColor();
         }
     }
     else
