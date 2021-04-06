@@ -38,6 +38,11 @@ MQTTClient MQTT(1024);
 WiFiManager WM;
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> Pixel(PixelLen);
 
+
+class Pixel
+{
+
+}
 class ByteStream
 {
 public:
