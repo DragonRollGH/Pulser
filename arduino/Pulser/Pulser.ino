@@ -38,11 +38,48 @@ MQTTClient MQTT(1024);
 WiFiManager WM;
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> Pixel(PixelLen);
 
-
 class Pixel
 {
+public:
+    bool active = false;
+    float H;
+    float S;
+    float L;
+    byte live;
+    byte dead;
+    byte lightness;
 
-}
+    void run(void)
+    {
+        active = true;
+        live = 5;
+        dead = 35;
+        H = 0;
+        S = 255;
+        L = 50;
+        lightness = L;
+    }
+
+    void update(void)
+    {
+        if (active)
+        {
+            if (liveTime)
+            {
+                liveTime -= 1;
+            }
+            else if (L)
+            {
+                L -= Lightness / deadTime;
+            }
+            else
+            {
+                active = false;
+            }
+        }
+    }
+};
+
 class ByteStream
 {
 public:
@@ -87,14 +124,14 @@ ByteStream BS;
 
 void mqttConnect(void)
 {
-  while (!MQTT.connect(MQTTClientid, MQTTUsername, MQTTPassword))
-  {
-    delay(500);
-  }
-  MQTT.subscribe(MQTTSub1);
-  delay(10);
-  MQTT.subscribe(MQTTSub2);
-  Serial.println("MQTT connected");
+    while (!MQTT.connect(MQTTClientid, MQTTUsername, MQTTPassword))
+    {
+        delay(500);
+    }
+    MQTT.subscribe(MQTTSub1);
+    delay(10);
+    MQTT.subscribe(MQTTSub2);
+    Serial.println("MQTT connected");
 }
 
 void mqttMsg(String &topic, String &payload)
