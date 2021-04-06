@@ -225,7 +225,8 @@ void cmdUpdate(String &paylaod)
     }
 }
 
-unsigned int toInt64(unsigned char H, unsigned char L)
+
+byte toByte(byte H, byte L)
 {
     byte bH, bL, b;
     if (H > '9')
@@ -248,32 +249,8 @@ unsigned int toInt64(unsigned char H, unsigned char L)
     return b;
 }
 
-unsigned int toInt16(unsigned char H, unsigned char L)
-    // void Unzip(unsigned char *unzipStr, unsigned char *zipStr, unsigned int length)
-    // {
-    //     unsigned int zipIdx, unzipIdx = 0;
-    //     for (zipIdx = 0; zipIdx < length; zipIdx++)
-    //     {
-    //         if (zipStr[zipIdx] == '*')
-    //         {
-    //             byte count = toHex(zipStr[zipIdx + 1], zipStr[zipIdx + 2]);
-    //             zipIdx += 2;
-    //             for (byte i = 0; i < count; i++)
-    //             {
-    //                 for (byte j = 6; j > 2; j--)
-    //                 {
-    //                     unzipStr[unzipIdx++] = zipStr[zipIdx - j];
-    //                 }
-    //             }
-    //         }
-    //         else
-    //         {
-    //             unzipStr[unzipIdx++] = zipStr[zipIdx];
-    //         }
-    //     }
-    // }
 
-    void Unzip(byte *payload, unsigned int length)
+void Unzip(byte *payload, unsigned int length)
 {
     byte zipWindow = 4;
     unsigned int validation = 0;
@@ -319,6 +296,7 @@ void stopFlow(void)
 
 void setPixelsColor(void)
 {
+    ++flowFrame;
     bool running = 1;
     while (BS.avalible && running)
     {
@@ -439,9 +417,7 @@ void loop()
     {
         if (millis() - flowStart >= flowFrame * FrameRate)
         {
-            ++flowFrame;
             setPixelsColor();
-            showPixelsColor();
         }
     }
     else
