@@ -24,18 +24,22 @@ const char *AP_SSID = "Rolls_Pulser";
 // const char *MQTTPub = "";
 
 
-bool isCmd = 0;
-bool isFlow = 0;
+byte H = 0;
+byte S = 255;
+byte L = 50;
+byte live = 5;
+byte dead = 35;
 byte sleep = 0;
 unsigned long cache = PixelLen * 4 * 20;
 unsigned long now = millis();
-
-String cmdArg;
+unsigned long flowStart;
+unsigned long flowFrame;
 
 WiFiClient WLAN;
 MQTTClient MQTT(1024);
 
 WiFiManager WM;
+
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> Pixel(PixelLen);
 
 class Pixel
@@ -45,32 +49,30 @@ public:
     float H;
     float S;
     float L;
+    float deltaL;
     byte live;
-    byte dead;
-    byte lightness;
 
-    void run(void)
+    void run(byte rH, byte rS, byte rL, byte rlive, byte rdead)
     {
         active = true;
-        live = 5;
-        dead = 35;
-        H = 0;
-        S = 255;
-        L = 50;
-        lightness = L;
+        H = rH / 255.0f;
+        S = rS / 255.0f;
+        L = rL / 255.0f;
+        deltaL = L / rdead;
+        live = rlive;
     }
 
     void update(void)
     {
         if (active)
         {
-            if (liveTime)
+            if (live)
             {
-                liveTime -= 1;
+                live -= 1;
             }
-            else if (L)
+            else if (L > 0)
             {
-                L -= Lightness / deadTime;
+                L -= delatL;
             }
             else
             {
@@ -119,7 +121,6 @@ public:
         avalible -= ui;
     }
 };
-
 ByteStream BS;
 
 void mqttConnect(void)
@@ -136,33 +137,65 @@ void mqttConnect(void)
 
 void mqttMsg(String &topic, String &payload)
 {
-    Serial.print("Message arrived [");
-    Serial.print(topic);
-    Serial.print("] ");
-    Serial.println();
+    // Serial.print("Message arrived [");
+    // Serial.print(topic);
+    // Serial.print("] ");
+    // Serial.println();
+    Serial.println("Message arrived [" + topic + "] ");
 
-    if (payload[0] == ':')
+    if (payload.length > 1 && payload[0] == ':')
     {
-        isCmd = 1;
-        cmdArg = "";
-        for (byte i = 1; i < length; i++)
+        switch (payload[1])
         {
-            cmdArg += (char)payload[i]
+        case 'A':
+            cmdACK(payload);
+            break;
+        case 'D':
+            cmdDefault(payload);
+            break;
+        case 'H':
+            cmdHSL(payload);
+            break;
+        case 'P':
+            cmdPulse(payload);
+            break;
+        case 'R':
+            cmdRGB(payload);
+            break;
+        case 'U':
+            cmdUpdate(payload);
+            break;
+        default:
+            break;
         }
     }
-    else
+}
+void cmdACK(String &payload);
+
+void cmdDefault(String &payload);
+
+void cmdHSL(String &payload)
+{
+    if (payload.length > 2)
     {
-        Unzip(payload, length)
+        for (unsigned int i = 2; i < payload.length; i++)
+        {
+            BS.write(payload[i]);
+        }
     }
 }
 
-void cmdUpdate(String cmdArg)
+void cmdPulse(String &payload);
+
+void cmdRGB(String &payload);
+
+void cmdUpdate(String &paylaod)
 {
     String url = "https://github.com/DragonRollGH/PulseBeeper/raw/main/arduino/latest.bin";
-    if (cmdArg.length >= 1)
-    // if (cmdArg.substring(1,7) == "http://")
+    if (paylaod.length > 1)
+    // if (paylaod.substring(1,7) == "http://")
     {
-        url = cmdArg.substring(1);
+        url = paylaod.substring(1);
     }
     Serial.println("Starting update from" + url);
     ESPhttpUpdate.setLedPin(LED_BUILTIN, LOW);
@@ -206,31 +239,32 @@ unsigned int toInt64(unsigned char H, unsigned char L)
     return b;
 }
 
-// void Unzip(unsigned char *unzipStr, unsigned char *zipStr, unsigned int length)
-// {
-//     unsigned int zipIdx, unzipIdx = 0;
-//     for (zipIdx = 0; zipIdx < length; zipIdx++)
-//     {
-//         if (zipStr[zipIdx] == '*')
-//         {
-//             byte count = toHex(zipStr[zipIdx + 1], zipStr[zipIdx + 2]);
-//             zipIdx += 2;
-//             for (byte i = 0; i < count; i++)
-//             {
-//                 for (byte j = 6; j > 2; j--)
-//                 {
-//                     unzipStr[unzipIdx++] = zipStr[zipIdx - j];
-//                 }
-//             }
-//         }
-//         else
-//         {
-//             unzipStr[unzipIdx++] = zipStr[zipIdx];
-//         }
-//     }
-// }
+unsigned int toInt16(unsigned char H, unsigned char L)
+    // void Unzip(unsigned char *unzipStr, unsigned char *zipStr, unsigned int length)
+    // {
+    //     unsigned int zipIdx, unzipIdx = 0;
+    //     for (zipIdx = 0; zipIdx < length; zipIdx++)
+    //     {
+    //         if (zipStr[zipIdx] == '*')
+    //         {
+    //             byte count = toHex(zipStr[zipIdx + 1], zipStr[zipIdx + 2]);
+    //             zipIdx += 2;
+    //             for (byte i = 0; i < count; i++)
+    //             {
+    //                 for (byte j = 6; j > 2; j--)
+    //                 {
+    //                     unzipStr[unzipIdx++] = zipStr[zipIdx - j];
+    //                 }
+    //             }
+    //         }
+    //         else
+    //         {
+    //             unzipStr[unzipIdx++] = zipStr[zipIdx];
+    //         }
+    //     }
+    // }
 
-void Unzip(byte *payload, unsigned int length)
+    void Unzip(byte *payload, unsigned int length)
 {
     byte zipWindow = 4;
     unsigned int validation = 0;
@@ -261,6 +295,13 @@ void Unzip(byte *payload, unsigned int length)
     }
 }
 
+void runFlow(void)
+{
+    flowFrame = 1;
+    flowStart = millis();
+    sleep = SleepRun;
+}
+
 // void SetPixelsColor(unsigned char *colorStr)
 // {
 //     unsigned char colorList[PixelLen * 3];
@@ -279,7 +320,47 @@ void Unzip(byte *payload, unsigned int length)
 
 void SetPixelsColor(void)
 {
-    if (BS.avalible >= PixelLen * 4)
+    bool a = 1;
+    while (a)
+    {
+        switch (BS.read())
+        {
+        case '&':
+            switch (BS.read())
+            {
+            case 'H':
+                H = toByte(BS.read(), BS.read());
+                break;
+            case 'S':
+                S = toByte(BS.read(), BS.read());
+                break;
+            case 'L':
+                L = toByte(BS.read(), BS.read());
+                break;
+            case 'l':
+                live = toByte(BS.read(), BS.read());
+                break;
+            case 'd':
+                dead = toByte(BS.read(), BS.read());
+                break;
+            case 'C':
+                setHSL(BS.read(), BS.read(), BS.read(), BS.read());
+                break;
+            case 'N':
+                runPixel(BS.read(), BS.read(), BS.read(), BS.read());
+                break;
+            default:
+                break;
+            }
+            break;
+        case ';':
+            a = 0;
+            break;
+        default:
+            break;
+        }
+    }
+    if (BS.read() == '?')
     {
         byte arry[PixelLen * 3];
         byte base[PixelLen * 4];
@@ -301,7 +382,6 @@ void SetPixelsColor(void)
     }
     else
     {
-        isFlow = 0;
         sleep = SleepIdle;
         Pixel.ClearTo(RgbColor(0, 0, 0));
         Pixel.Show();
@@ -329,36 +409,23 @@ void loop()
 {
     if (!MQTT.connected())
     {
-        ConnectMQTT();
+        mqttConnect();
     }
     MQTT.loop();
 
-    if (isFlow)
+    if (flowStart)
     {
-        if (millis() - now >= FrameRate)
+        if (millis() - flowStart >= flowFrame * FrameRate)
         {
-            now = millis();
+            ++flowFrame;
             SetPixelsColor();
-        }
-    }
-    else if (isCmd)
-    {
-        isCmd = 0;
-        switch (cmdArg[0])
-        {
-        case 'a':
-            cmdUpdate(cmdArg);
-            break;
-        default:
-            Serial.println("Unknown command.")
         }
     }
     else
     {
         if (BS.avalible >= cache)
         {
-            isFlow = 1;
-            sleep = SleepRun;
+            runFlow();
         }
     }
 
