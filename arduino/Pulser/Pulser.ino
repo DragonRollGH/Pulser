@@ -39,7 +39,6 @@ byte B = dB;
 byte sleep = 0;
 
 unsigned long cache = PixelLen * 4 * 20;
-unsigned long now = millis();
 unsigned long flowStart;
 unsigned long flowFrame;
 
@@ -124,7 +123,7 @@ public:
         }
     }
 
-    void undo(unsigned int ui)
+    void unwrite(unsigned int ui)
     {
         wi = (wi + buffer - ui) % buffer;
         avalible -= ui;
@@ -248,36 +247,7 @@ byte toByte(byte H, byte L)
     return b;
 }
 
-void Unzip(byte *payload, unsigned int length)
-{
-    byte zipWindow = 4;
-    unsigned int validation = 0;
-    for (unsigned int p = 0; p < length; p++)
-    {
-        if (buffer[p] == '*')
-        {
-            byte count = toHex(buffer[p + 1], buffer[p + 2]);
-            p += 2;
-            for (byte i = 0; i < count; i++)
-            {
-                for (byte j = zipWindow + 2; j > 2; j--)
-                {
-                    BS.write(buffer[p - j]);
-                    ++validation;
-                }
-            }
-        }
-        else
-        {
-            BS.write(buffer[p]);
-            ++validation;
-        }
-    }
-    if (validation % (PixelLen * 4) != 0)
-    {
-        BS.undo(validation);
-    }
-}
+void setHSL(byte b1, byte b2, byte b3, byte b4);
 
 void runPixels(byte b1, byte b2, byte b3, byte b4)
 {
@@ -360,33 +330,6 @@ void setPixelsColor(void)
         stopFlow();
     }
 }
-
-// if (BS.read() == '?')
-// {
-//     byte arry[PixelLen * 3];
-//     byte base[PixelLen * 4];
-//     for (byte i = 0; i < PixelLen * 4; i++)
-//     {
-//         base[i] = BS.read();
-//     }
-//     decode_base64(base, arry);
-//     for (byte i = 0; i < PixelLen; i++)
-//     {
-//         Serial.print(i);
-//         Serial.print(": ");
-//         Serial.print(arry[i * 3]);
-//         Serial.print("|");
-//         heart.SetPixelColor(i, RgbColor(arry[i * 3], arry[i * 3 + 1], arry[i * 3 + 2]));
-//     }
-//     Serial.println("");
-//     heart.Show();
-// }
-// else
-// {
-//     sleep = SleepIdle;
-//     heart.ClearTo(RgbColor(0, 0, 0));
-//     heart.Show();
-// }
 
 void runFlow(void)
 {
