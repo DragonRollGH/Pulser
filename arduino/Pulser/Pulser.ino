@@ -43,7 +43,7 @@ unsigned long flowStart;
 unsigned long flowFrame;
 
 WiFiClient WLAN;
-MQTTClient MQTT(1024);
+MQTTClient MQTT(512);
 
 WiFiManager WM;
 
@@ -77,13 +77,13 @@ public:
             {
                 A -= 1;
             }
-            else if (L > 0)
-            {
-                L -= deltaL;
-            }
             else
             {
-                active = false;
+                L -= deltaL;
+                if (L <= 0)
+                {
+                    active = false;
+                }
             }
         }
     }
@@ -93,10 +93,10 @@ Pixel pixels[PixelLen];
 class ByteStream
 {
 public:
-    const static unsigned int buf = 1024;
-    unsigned int wi;
-    unsigned int ri;
-    unsigned int avalible;
+    const static unsigned int buf = 2048;
+    unsigned int wi = 0;
+    unsigned int ri = 0;
+    unsigned int avalible = 0;
     byte stream[buf];
 
     void begin(void)
@@ -182,9 +182,9 @@ void mqttMsg(String &topic, String &payload)
     }
 }
 
-void cmdACK(String &payload){}
+void cmdACK(String &payload) {}
 
-void cmdDefault(String &payload){}
+void cmdDefault(String &payload) {}
 
 void cmdHSL(String &payload)
 {
@@ -197,9 +197,9 @@ void cmdHSL(String &payload)
     }
 }
 
-void cmdPulse(String &payload){}
+void cmdPulse(String &payload) {}
 
-void cmdRGB(String &payload){}
+void cmdRGB(String &payload) {}
 
 void cmdUpdate(String &paylaod)
 {
@@ -209,22 +209,40 @@ void cmdUpdate(String &paylaod)
         url = paylaod.substring(2);
     }
     Serial.println("Starting update from " + url);
+    MQTT.publish(MQTTPub, "Starting update from " + url);
+
     ESPhttpUpdate.setLedPin(LED_BUILTIN, LOW);
-    t_httpUpdate_return ret = ESPhttpUpdate.update(url);
-    switch (ret)
-    {
-    case HTTP_UPDATE_FAILED:
-        Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-        break;
+    ESPhttpUpdate.onStart(updateStarted);
+    ESPhttpUpdate.onEnd(updateFinished);
+    ESPhttpUpdate.onError(updateError);
+    ESPhttpUpdate.update(url);
+    // switch (ret)
+    // {
+    // case HTTP_UPDATE_FAILED:
+    //     Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+    //     MQTT.publish(MQTTPub, String("HTTP_UPDATE_FAILED Error: ") + ESPhttpUpdate.getLastErrorString().c_str());
+    //     break;
 
-    case HTTP_UPDATE_NO_UPDATES:
-        Serial.println("HTTP_UPDATE_NO_UPDATES");
-        break;
+    // case HTTP_UPDATE_OK:
+    //     Serial.println("HTTP_UPDATE_OK");
+    //     MQTT.publish(MQTTPub, "HTTP_UPDATE_OK");
+    //     break;
+    // }
+}
 
-    case HTTP_UPDATE_OK:
-        Serial.println("HTTP_UPDATE_OK");
-        break;
-    }
+void updateStarted()
+{
+    MQTT.publish(MQTTPub, "[httpUpdate] Started");
+}
+
+void updateFinished()
+{
+    MQTT.publish(MQTTPub, "[httpUpdate] Finished");
+}
+
+void updateError(int err)
+{
+    MQTT.publish(MQTTPub, String("[httpUpdate] Error: ") + ESPhttpUpdate.getLastErrorString().c_str());
 }
 
 byte toByte(byte H, byte L)
@@ -250,9 +268,9 @@ byte toByte(byte H, byte L)
     return b;
 }
 
-void useDefault(void){}
+void useDefault(void) {}
 
-void setHSL(byte b1, byte b2, byte b3, byte b4){}
+void setHSL(byte b1, byte b2, byte b3, byte b4) {}
 
 void runPixels(byte b1, byte b2, byte b3, byte b4)
 {
@@ -271,7 +289,6 @@ void runPixels(byte b1, byte b2, byte b3, byte b4)
 
 void setPixelsColor(void)
 {
-    // Serial.println("flowFrame: " + String(flowFrame));
     ++flowFrame;
     bool running = 1;
     while (BS.avalible && running)
@@ -303,7 +320,6 @@ void setPixelsColor(void)
                 setHSL(BS.read(), BS.read(), BS.read(), BS.read());
                 break;
             case 'N':
-                // Serial.println("&N");
                 runPixels(BS.read(), BS.read(), BS.read(), BS.read());
                 break;
             default:
