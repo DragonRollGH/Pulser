@@ -10,8 +10,6 @@
 
 const byte PixelLen = 20;
 const byte FrameRate = 17; // =1000ms/60fps
-const byte SleepRun = 1;
-const byte SleepIdle = 100;
 const char *AP_SSID = "Rolls_Pulser";
 const char *Name = "Roll";
 
@@ -25,23 +23,19 @@ const char *Name = "Roll";
 // const char *MQTTPub = "";
 
 
-byte dH = 0;
-byte dS = 255;
-byte dL = 50;
-byte dA = 5;
-byte dB = 35;
+//define in FS
+byte H = 0;
+byte S = 255;
+byte L = 50;
+byte A = 5;
+byte B = 35;
+byte sleepRun = 1;
+byte sleepIdle = 100;
+unsigned int flowCache = 1;
 
-byte H = dH;
-byte S = dS;
-byte L = dL;
-byte A = dA;
-byte B = dB;
-
-byte sleep = 0;
-
-unsigned int cache = 1;
+byte sleep = sleepIdle;
+unsigned int flowFrame;
 unsigned long flowStart;
-unsigned long flowFrame;
 
 WiFiClient WLAN;
 MQTTClient MQTT(512);
@@ -209,7 +203,6 @@ void cmdUpdate(String &paylaod)
 
     ESPhttpUpdate.setLedPin(LED_BUILTIN, LOW);
     ESPhttpUpdate.onStart(updateStarted);
-    ESPhttpUpdate.onEnd(updateFinished);
     ESPhttpUpdate.onError(updateError);
     ESPhttpUpdate.update(url);
 }
@@ -217,11 +210,6 @@ void cmdUpdate(String &paylaod)
 void updateStarted()
 {
     MQTT.publish(MQTTPub, "[httpUpdate] Started");
-}
-
-void updateFinished()
-{
-    MQTT.publish(MQTTPub, "[httpUpdate] Finished");
 }
 
 void updateError(int err)
@@ -342,13 +330,13 @@ void runFlow(void)
 {
     flowFrame = 1;
     flowStart = millis();
-    sleep = SleepRun;
+    sleep = sleepRun;
 }
 
 void stopFlow(void)
 {
     flowStart = 0;
-    sleep = SleepIdle;
+    sleep = sleepIdle;
 }
 
 void setup()
@@ -385,7 +373,7 @@ void loop()
     }
     else
     {
-        if (BS.avalible >= cache)
+        if (BS.avalible >= flowCache)
         {
             runFlow();
         }
