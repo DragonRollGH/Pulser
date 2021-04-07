@@ -202,20 +202,22 @@ void cmdUpdate(String &paylaod)
     MQTT.publish(MQTTPub, "Starting update from " + url);
 
     ESPhttpUpdate.setLedPin(LED_BUILTIN, LOW);
-    ESPhttpUpdate.onStart(updateStarted);
-    ESPhttpUpdate.onError(updateError);
+    // ESPhttpUpdate.onStart(updateStarted);
+    // ESPhttpUpdate.onError(updateError);
+    ESPhttpUpdate.onStart([]{MQTT.publish(MQTTPub, "[httpUpdate] Started");});
+    ESPhttpUpdate.onError([](int err){MQTT.publish(MQTTPub, String("[httpUpdate] Error: ") + ESPhttpUpdate.getLastErrorString().c_str());});
     ESPhttpUpdate.update(url);
 }
 
-void updateStarted()
-{
-    MQTT.publish(MQTTPub, "[httpUpdate] Started");
-}
+// void updateStarted()
+// {
+//     MQTT.publish(MQTTPub, "[httpUpdate] Started");
+// }
 
-void updateError(int err)
-{
-    MQTT.publish(MQTTPub, String("[httpUpdate] Error: ") + ESPhttpUpdate.getLastErrorString().c_str());
-}
+// void updateError(int err)
+// {
+//     MQTT.publish(MQTTPub, String("[httpUpdate] Error: ") + ESPhttpUpdate.getLastErrorString().c_str());
+// }
 
 byte toByte(byte H, byte L)
 {
