@@ -136,7 +136,7 @@ void mqttConnect(void)
     delay(10);
     MQTT.subscribe(MQTTSub2);
     // Serial.println("MQTT connected");
-    MQTT.publish(MQTTPub, Name);
+    cmdACK();
 }
 
 void mqttMsg(String &topic, String &payload)
@@ -148,7 +148,7 @@ void mqttMsg(String &topic, String &payload)
         switch (payload[1])
         {
         case 'A':
-            cmdACK(payload);
+            cmdACK();
             break;
         case 'D':
             cmdDefault(payload);
@@ -172,7 +172,10 @@ void mqttMsg(String &topic, String &payload)
     }
 }
 
-void cmdACK(String &payload) {}
+void cmdACK(void)
+{
+    MQTT.publish(MQTTPub, Name);
+}
 
 void cmdDefault(String &payload) {}
 
@@ -274,6 +277,8 @@ void setPixelsColor(void)
     }
 }
 
+void useDefault(void) {}
+
 byte toByte(byte H, byte L)
 {
     byte bH, bL, b;
@@ -296,8 +301,6 @@ byte toByte(byte H, byte L)
     b = bH + bL;
     return b;
 }
-
-void useDefault(void) {}
 
 void setHSL(byte b1, byte b2, byte b3, byte b4) {}
 
