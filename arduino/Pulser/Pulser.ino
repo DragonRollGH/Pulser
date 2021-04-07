@@ -202,63 +202,9 @@ void cmdUpdate(String &paylaod)
     MQTT.publish(MQTTPub, "Starting update from " + url);
 
     ESPhttpUpdate.setLedPin(LED_BUILTIN, LOW);
-    // ESPhttpUpdate.onStart(updateStarted);
-    // ESPhttpUpdate.onError(updateError);
-    ESPhttpUpdate.onStart([]{MQTT.publish(MQTTPub, "[httpUpdate] Started");});
-    ESPhttpUpdate.onError([](int err){MQTT.publish(MQTTPub, String("[httpUpdate] Error: ") + ESPhttpUpdate.getLastErrorString().c_str());});
+    ESPhttpUpdate.onStart([] { MQTT.publish(MQTTPub, "[httpUpdate] Started"); });
+    ESPhttpUpdate.onError([](int err) { MQTT.publish(MQTTPub, String("[httpUpdate] Error: ") + ESPhttpUpdate.getLastErrorString().c_str()); });
     ESPhttpUpdate.update(url);
-}
-
-// void updateStarted()
-// {
-//     MQTT.publish(MQTTPub, "[httpUpdate] Started");
-// }
-
-// void updateError(int err)
-// {
-//     MQTT.publish(MQTTPub, String("[httpUpdate] Error: ") + ESPhttpUpdate.getLastErrorString().c_str());
-// }
-
-byte toByte(byte H, byte L)
-{
-    byte bH, bL, b;
-    if (H > '9')
-    {
-        bH = (H - 'a' + 10) * 16;
-    }
-    else
-    {
-        bH = (H - '0') * 16;
-    }
-    if (L > '9')
-    {
-        bL = L - 'a' + 10;
-    }
-    else
-    {
-        bL = L - '0';
-    }
-    b = bH + bL;
-    return b;
-}
-
-void useDefault(void) {}
-
-void setHSL(byte b1, byte b2, byte b3, byte b4) {}
-
-void runPixels(byte b1, byte b2, byte b3, byte b4)
-{
-    byte base[4] = {b1, b2, b3, b4};
-    byte arry[3];
-    decode_base64(base, arry);
-    for (byte i = 0; i < PixelLen; i++)
-    {
-        if (arry[i / 8] & (byte)128)
-        {
-            pixels[i].run(H, S, L, A, B);
-        }
-        arry[i / 8] <<= 1;
-    }
 }
 
 void setPixelsColor(void)
@@ -325,6 +271,48 @@ void setPixelsColor(void)
     if (!running)
     {
         stopFlow();
+    }
+}
+
+byte toByte(byte H, byte L)
+{
+    byte bH, bL, b;
+    if (H > '9')
+    {
+        bH = (H - 'a' + 10) * 16;
+    }
+    else
+    {
+        bH = (H - '0') * 16;
+    }
+    if (L > '9')
+    {
+        bL = L - 'a' + 10;
+    }
+    else
+    {
+        bL = L - '0';
+    }
+    b = bH + bL;
+    return b;
+}
+
+void useDefault(void) {}
+
+void setHSL(byte b1, byte b2, byte b3, byte b4) {}
+
+void runPixels(byte b1, byte b2, byte b3, byte b4)
+{
+    byte base[4] = {b1, b2, b3, b4};
+    byte arry[3];
+    decode_base64(base, arry);
+    for (byte i = 0; i < PixelLen; i++)
+    {
+        if (arry[i / 8] & (byte)128)
+        {
+            pixels[i].run(H, S, L, A, B);
+        }
+        arry[i / 8] <<= 1;
     }
 }
 
