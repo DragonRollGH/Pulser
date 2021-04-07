@@ -38,7 +38,7 @@ byte B = dB;
 
 byte sleep = 0;
 
-unsigned long cache = PixelLen * 4 * 20;
+unsigned int cache = 1;
 unsigned long flowStart;
 unsigned long flowFrame;
 
@@ -79,7 +79,7 @@ public:
             }
             else if (L > 0)
             {
-                L -= delatL;
+                L -= deltaL;
             }
             else
             {
@@ -93,18 +93,25 @@ Pixel pixels[PixelLen];
 class ByteStream
 {
 public:
-    unsigned int buffer = 4800;
-    unsigned int wi = 0;
-    unsigned int ri = 0;
-    unsigned int avalible = 0;
-    byte stream[buffer];
+    const static unsigned int buf = 1024;
+    unsigned int wi;
+    unsigned int ri;
+    unsigned int avalible;
+    byte stream[buf];
+
+    void begin(void)
+    {
+        wi = 0;
+        ri = 0;
+        avalible = 0;
+    }
 
     void write(byte w)
     {
-        if (avalible <= buffer)
+        if (avalible <= buf)
         {
             stream[wi] = w;
-            wi = (wi + 1) % buffer;
+            wi = (wi + 1) % buf;
             ++avalible;
         }
     }
@@ -117,7 +124,7 @@ public:
         }
         else
         {
-            ri = (ri + 1) % buffer;
+            ri = (ri + 1) % buf;
             --avalible;
             return stream[ri - 1];
         }
@@ -125,7 +132,7 @@ public:
 
     void unwrite(unsigned int ui)
     {
-        wi = (wi + buffer - ui) % buffer;
+        wi = (wi + buf - ui) % buf;
         avalible -= ui;
     }
 };
@@ -145,13 +152,9 @@ void mqttConnect(void)
 
 void mqttMsg(String &topic, String &payload)
 {
-    // Serial.print("Message arrived [");
-    // Serial.print(topic);
-    // Serial.print("] ");
-    // Serial.println();
-    Serial.println("Message arrived [" + topic + "] ");
+    Serial.println("Message arrived [" + topic + "] " + payload);
 
-    if (payload.length > 1 && payload[0] == ':')
+    if (payload.length() > 1 && payload[0] == ':')
     {
         switch (payload[1])
         {
@@ -178,34 +181,34 @@ void mqttMsg(String &topic, String &payload)
         }
     }
 }
-void cmdACK(String &payload);
 
-void cmdDefault(String &payload);
+void cmdACK(String &payload){}
+
+void cmdDefault(String &payload){}
 
 void cmdHSL(String &payload)
 {
-    if (payload.length > 2)
+    if (payload.length() > 2)
     {
-        for (unsigned int i = 2; i < payload.length; i++)
+        for (unsigned int i = 2; i < payload.length(); i++)
         {
             BS.write(payload[i]);
         }
     }
 }
 
-void cmdPulse(String &payload);
+void cmdPulse(String &payload){}
 
-void cmdRGB(String &payload);
+void cmdRGB(String &payload){}
 
 void cmdUpdate(String &paylaod)
 {
-    String url = "https://github.com/DragonRollGH/PulseBeeper/raw/main/arduino/latest.bin";
-    if (paylaod.length > 1)
-    // if (paylaod.substring(1,7) == "http://")
+    String url = "http://192.168.1.110:5500/arduino/Pulser/Pulser.ino.generic.bin";
+    if (paylaod.length() > 2)
     {
-        url = paylaod.substring(1);
+        url = paylaod.substring(2);
     }
-    Serial.println("Starting update from" + url);
+    Serial.println("Starting update from " + url);
     ESPhttpUpdate.setLedPin(LED_BUILTIN, LOW);
     t_httpUpdate_return ret = ESPhttpUpdate.update(url);
     switch (ret)
@@ -247,16 +250,18 @@ byte toByte(byte H, byte L)
     return b;
 }
 
-void setHSL(byte b1, byte b2, byte b3, byte b4);
+void useDefault(void){}
+
+void setHSL(byte b1, byte b2, byte b3, byte b4){}
 
 void runPixels(byte b1, byte b2, byte b3, byte b4)
 {
-    byte *base = {b1, b2, b3, b4};
-    byte *arry[3];
+    byte base[4] = {b1, b2, b3, b4};
+    byte arry[3];
     decode_base64(base, arry);
     for (byte i = 0; i < PixelLen; i++)
     {
-        if (arry[i / 8] & 128)
+        if (arry[i / 8] & (byte)128)
         {
             pixels[i].run(H, S, L, A, B);
         }
@@ -266,6 +271,7 @@ void runPixels(byte b1, byte b2, byte b3, byte b4)
 
 void setPixelsColor(void)
 {
+    // Serial.println("flowFrame: " + String(flowFrame));
     ++flowFrame;
     bool running = 1;
     while (BS.avalible && running)
@@ -297,6 +303,7 @@ void setPixelsColor(void)
                 setHSL(BS.read(), BS.read(), BS.read(), BS.read());
                 break;
             case 'N':
+                // Serial.println("&N");
                 runPixels(BS.read(), BS.read(), BS.read(), BS.read());
                 break;
             default:
@@ -357,6 +364,8 @@ void setup()
     MQTT.onMessage(mqttMsg);
 
     heart.Begin();
+
+    BS.begin();
 
     Serial.println("\nESP OK");
 }
