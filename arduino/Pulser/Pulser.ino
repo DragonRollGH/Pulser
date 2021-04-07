@@ -13,6 +13,7 @@ const byte FrameRate = 17; // =1000ms/60fps
 const byte SleepRun = 1;
 const byte SleepIdle = 100;
 const char *AP_SSID = "Rolls_Pulser";
+const char *Name = "Roll";
 
 // const char *MQTTServer = "";
 // const int   MQTTPort = 1883;
@@ -99,13 +100,6 @@ public:
     unsigned int avalible = 0;
     byte stream[buf];
 
-    void begin(void)
-    {
-        wi = 0;
-        ri = 0;
-        avalible = 0;
-    }
-
     void write(byte w)
     {
         if (avalible <= buf)
@@ -147,12 +141,13 @@ void mqttConnect(void)
     MQTT.subscribe(MQTTSub1);
     delay(10);
     MQTT.subscribe(MQTTSub2);
-    Serial.println("MQTT connected");
+    // Serial.println("MQTT connected");
+    MQTT.publish(MQTTPub, Name);
 }
 
 void mqttMsg(String &topic, String &payload)
 {
-    Serial.println("Message arrived [" + topic + "] " + payload);
+    // Serial.println("Message arrived [" + topic + "] " + payload);
 
     if (payload.length() > 1 && payload[0] == ':')
     {
@@ -177,6 +172,7 @@ void mqttMsg(String &topic, String &payload)
             cmdUpdate(payload);
             break;
         default:
+            MQTT.publish(MQTTPub, "Unknown command");
             break;
         }
     }
@@ -208,7 +204,7 @@ void cmdUpdate(String &paylaod)
     {
         url = paylaod.substring(2);
     }
-    Serial.println("Starting update from " + url);
+    // Serial.println("Starting update from " + url);
     MQTT.publish(MQTTPub, "Starting update from " + url);
 
     ESPhttpUpdate.setLedPin(LED_BUILTIN, LOW);
@@ -216,18 +212,6 @@ void cmdUpdate(String &paylaod)
     ESPhttpUpdate.onEnd(updateFinished);
     ESPhttpUpdate.onError(updateError);
     ESPhttpUpdate.update(url);
-    // switch (ret)
-    // {
-    // case HTTP_UPDATE_FAILED:
-    //     Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-    //     MQTT.publish(MQTTPub, String("HTTP_UPDATE_FAILED Error: ") + ESPhttpUpdate.getLastErrorString().c_str());
-    //     break;
-
-    // case HTTP_UPDATE_OK:
-    //     Serial.println("HTTP_UPDATE_OK");
-    //     MQTT.publish(MQTTPub, "HTTP_UPDATE_OK");
-    //     break;
-    // }
 }
 
 void updateStarted()
@@ -369,7 +353,7 @@ void stopFlow(void)
 
 void setup()
 {
-    Serial.begin(115200);
+    // Serial.begin(115200);
 
     WiFi.mode(WIFI_STA);
     WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
@@ -381,9 +365,7 @@ void setup()
 
     heart.Begin();
 
-    BS.begin();
-
-    Serial.println("\nESP OK");
+    // Serial.println("\nESP OK");
 }
 
 void loop()
