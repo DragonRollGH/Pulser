@@ -324,12 +324,14 @@ void runFlow(void)
     flowFrame = 1;
     flowStart = millis();
     sleep = sleepRun;
+    heart.Begin();
 }
 
 void stopFlow(void)
 {
     flowStart = 0;
     sleep = sleepIdle;
+    pinMode(3, INPUT);
 }
 
 void setup()
@@ -343,8 +345,6 @@ void setup()
 
     MQTT.begin(MQTTServer, MQTTPort, WLAN);
     MQTT.onMessage(mqttMsg);
-
-    heart.Begin();
 
     // Serial.println("\nESP OK");
 }
