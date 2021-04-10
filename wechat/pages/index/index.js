@@ -13,7 +13,8 @@ Page({
         this.setData({
           errorUsername: false
         })
-        wx.navigateTo({
+        // wx.navigateTo({
+        wx.redirectTo({
           url: '../pulser/pulser?user=' + inputname
         })
       }
@@ -24,8 +25,8 @@ Page({
       })
     }
   },
-  login(e) {
-    let inputname = e.detail.value.name
+  login(event) {
+    let inputname = event.detail.value.name
     wx.setStorageSync("inputname", inputname)
     this.verify(inputname)
   },

@@ -1,5 +1,2 @@
-// app.js
 App({
-  onLaunch() {
-  }
 })
