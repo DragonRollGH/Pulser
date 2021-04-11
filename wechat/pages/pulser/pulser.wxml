@@ -5,6 +5,7 @@
   catchtouchend="pulserTouchEnd"
   catchtouchcancel="pulserTouchCancel">
   </canvas>
+  <text>{{ok}}</text>
   <!-- <image style="position: absolute; width: 600rpx; height: 600rpx;" src="../../img/Heart_v1.1.png" mode="aspectFit"
     bindtouchstart="handleTouchStart" bindtouchmove="handleTouchMove" bindtouchend="handleTouchEnd">
   </image> -->
