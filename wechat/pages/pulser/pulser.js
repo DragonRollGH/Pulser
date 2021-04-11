@@ -2,38 +2,15 @@ import Pixel from "Pixel"
 import Cursor from "Cursor"
 import PixelPos from "PixelPos"
 
-// const PixelPos = [
-//   // [0,0],
-//   [300.0000, 172.8408],
-//   [248.9052, 122.8176],
-//   [183.1116, 97.7400],
-//   [114.8904, 115.1592],
-//   [69.1740, 168.7104],
-//   [62.6712, 238.8204],
-//   [97.6836, 299.9436],
-//   [148.2624, 350.5224],
-//   [198.8424, 401.1012],
-//   [249.4212, 451.6812],
-//   [300.0000, 502.2600],
-//   [350.5788, 451.6812],
-//   [401.1576, 401.1012],
-//   [451.7376, 350.5224],
-//   [502.3164, 299.9436],
-//   [537.3288, 238.8204],
-//   [530.8260, 168.7104],
-//   [485.1096, 115.1592],
-//   [416.8884, 97.7400],
-//   [351.0948, 122.8176]
-// ];
-
 const ctx = wx.createCanvasContext("Canvas");
 
 const DPR = getApp().globalData.dpr;
-const PixelLen = 20;
-const TouchBoxR = 35;
-const DisplayR = 30;
-const CanvasWidth = 600;
-const CanvasHeight = 600;
+const PixelLen = PixelPos.length;
+const PixelRad = 30;
+const TouchBox = 100;
+const CanvasWidth = 700;
+const CanvasHeight = 700;
+const PixelColors = [0, 1, 0.9, 10, 35];
 
 var pixels = [];
 var cursors = [];
@@ -51,7 +28,7 @@ function initCanvas(ctx) {
   // ctx.fillStyle = "rgba(255,0,0,0.5)";
   // ctx.fillStyle = `rgba(${hsl2rgba(0,1,0.5)})`;
   // ctx.beginPath();
-  // ctx.arc(300, 300, DisplayR, 0, TWOPI);
+  // ctx.arc(300, 300, PixelRad, 0, TWOPI);
   // ctx.closePath();
   // ctx.fill();
   // ctx.fillRect(0, 0, 300, 300);
@@ -64,10 +41,10 @@ function initCanvas(ctx) {
 }
 
 function animate() {
-  // for (let i in cursors) {
-  //   cursors[i].updata()
-  //   // runCursoredPixel(cursors[i].pixelIds, webPixels);
-  // }
+  for (let i in cursors) {
+    cursors[i].updata()
+    cursors[i].runPixels(pixels, PixelColors)
+  }
   ctx.clearRect(0, 0, CanvasWidth, CanvasHeight);
   ctx.scale(1 / DPR, 1 / DPR);
   for (let i in pixels) {
@@ -80,7 +57,7 @@ function animate() {
 function pulserTouchStart(event) {
   // event.preventDefault();
   for (let i in event.changedTouches) {
-    var cursor = new Cursor();
+    var cursor = new Cursor(TouchBox);
     cursor.copy(event.changedTouches[i]);
     cursors.push(cursor);
   }
@@ -88,26 +65,33 @@ function pulserTouchStart(event) {
 
 function pulserTouchMove(event) {
   for (let i in event.changedTouches) {
-    var idx = findCursor(event.changedTouches[i].identifier);
+    var idx = findCursor(event.changedTouches[i].identifier, cursors);
     cursors[idx].copy(event.changedTouches[i]);
   }
 }
 
 function pulserTouchEnd(event) {
   for (let i in event.changedTouches) {
-    var idx = findCursor(event.changedTouches[i].identifier);
+    var idx = findCursor(event.changedTouches[i].identifier, cursors);
+    cursors.splice(idx, 1);
+  }
+}
+
+function pulserTouchCancel(event) {
+  for (let i in event.changedTouches) {
+    var idx = findCursor(event.changedTouches[i].identifier, cursors);
     cursors.splice(idx, 1);
   }
 }
 
 function onLoad() {
   for (let i = 0; i < PixelLen; i++) {
-    pixels.push(new Pixel(PixelPos[i][0], PixelPos[i][1], DisplayR));
-    pixels[i].run(0, 1, 0.9, 15, 35);
+    pixels.push(new Pixel(PixelPos[i][0], PixelPos[i][1], PixelRad));
+    pixels[i].run(PixelColors);
   }
-  cursors.push(new Cursor());
+  // cursors.push(new Cursor());
   initCanvas(ctx);
-  setInterval(animate, 100);
+  setInterval(animate, 17);
   animate();
 }
 

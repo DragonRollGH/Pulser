@@ -1,8 +1,9 @@
 <view style="text-align: center; display: flex; justify-content: center;">
-  <canvas id="Canvas" style="width: 600rpx; height: 600rpx;" canvas-id="Canvas"
-  bindtouchstart="pulserTouchStart"
-  bindtouchmove="pulserTouchMove"
-  bindtouchend="pulserTouchEnd">
+  <canvas id="Canvas" style="width: 700rpx; height: 700rpx;" canvas-id="Canvas"
+  catchtouchstart="pulserTouchStart"
+  catchtouchmove="pulserTouchMove"
+  catchtouchend="pulserTouchEnd"
+  catchtouchcancel="pulserTouchCancel">
   </canvas>
   <!-- <image style="position: absolute; width: 600rpx; height: 600rpx;" src="../../img/Heart_v1.1.png" mode="aspectFit"
     bindtouchstart="handleTouchStart" bindtouchmove="handleTouchMove" bindtouchend="handleTouchEnd">
