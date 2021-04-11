@@ -1,12 +1,10 @@
-<view style="text-align: center; display: flex; justify-content: center;">
-  <canvas id="Canvas" style="width: 700rpx; height: 700rpx;" canvas-id="Canvas"
+<view style="text-align: center; display: flex; justify-content: center;"
   catchtouchstart="pulserTouchStart"
   catchtouchmove="pulserTouchMove"
   catchtouchend="pulserTouchEnd"
   catchtouchcancel="pulserTouchCancel">
-  </canvas>
-  <text>{{ok}}</text>
-  <!-- <image style="position: absolute; width: 600rpx; height: 600rpx;" src="../../img/Heart_v1.1.png" mode="aspectFit"
-    bindtouchstart="handleTouchStart" bindtouchmove="handleTouchMove" bindtouchend="handleTouchEnd">
-  </image> -->
+  <canvas style="width: 700rpx; height: 700rpx;" canvas-id="Canvas"></canvas>
+</view>
+<view style="text-align: center; display: flex; justify-content: center;">
+  <image style="width: 300rpx; height: 300rpx;"src="../../img/avatar.jpg" mode="aspectFit"></image>
 </view>
