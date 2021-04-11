@@ -1,4 +1,5 @@
 import Pixel from "Pixel"
+import Cursor from "Cursor"
 
 const PixelPos = [
   // [0,0],
@@ -37,6 +38,14 @@ const CanvasHeight = 600;
 var pixels = [];
 var cursors = [];
 
+function findCursor(identifier, cursors) {
+  for (let i in cursors) {
+      if (cursors[i].identifier == identifier) {
+          return i;
+      }
+  }
+}
+
 function initCanvas(ctx) {
   ctx.scale(1 / DPR, 1 / DPR);
   // ctx.fillStyle = "rgba(255,0,0,0.5)";
@@ -68,47 +77,33 @@ function animate() {
   ctx.draw();
 }
 
-class Cursor {
-  constructor() {
-    this.x = undefined;
-    this.y = undefined;
-    this.identifier = undefined;
-    this.pixelIds = [undefined, undefined]; //index 0 is the old id, 1 is the new id
-  }
-  copy(cursor) {
-    this.x = cursor.X * DPR;
-    this.y = cursor.Y * DPR;
-    this.identifier = cursor.identifier;
-  }
-  clear() {
-    this.x = undefined;
-    this.y = undefined;
-    this.identifier = undefined;
-  }
-  updata() {
-    this.pixelIds[0] = this.pixelIds[1];
-    this.pixelIds[1] = undefined;
-    if (this.x == undefined || this.y == undefined) {
-      this.pixelIds[0] = undefined;
-      return
-    }
-    for (let i in PixelLen) {
-      dis = Math.sqrt((this.x - PixelPos[i][0]) ** 2 + (this.y - PixelPos[i][1]) ** 2);
-      if (dis <= TouchBoxR) {
-        this.pixelIds[1] = i;
-        break;
-      }
-    }
+function pulserTouchStart(event) {
+  // event.preventDefault();
+  for (let i in event.changedTouches) {
+    var cursor = new Cursor();
+    cursor.copy(event.changedTouches[i]);
+    cursors.push(cursor);
   }
 }
 
+function pulserTouchMove(event) {
+  for (let i in event.changedTouches) {
+    var idx = findCursor(event.changedTouches[i].identifier);
+    cursors[idx].copy(event.changedTouches[i]);
+  }
+}
 
+function pulserTouchEnd(event) {
+  for (let i in event.changedTouches) {
+    var idx = findCursor(event.changedTouches[i].identifier);
+    cursors.splice(idx, 1);
+  }
+}
 
-
-function onLoad () {
+function onLoad() {
   for (let i = 0; i < PixelLen; i++) {
     pixels.push(new Pixel(PixelPos[i][0], PixelPos[i][1], DisplayR));
-    pixels[i].run(0,1,0.9,15,35);
+    pixels[i].run(0, 1, 0.9, 15, 35);
   }
   cursors.push(new Cursor());
   initCanvas(ctx);
@@ -117,41 +112,9 @@ function onLoad () {
 }
 
 Page({
-  findCursor: function (identifier) {
-    for (let i in this.cursors) {
-      if (this.cursors[i].identifier == identifier) {
-        return i;
-      }
-    }
-  },
-
-  pageTouchStart: function (event) {
-    for (let i in event.changedTouches) {
-      var cursor = new Cursor();
-      cursor.copy(event.changedTouches[i]);
-      this.cursors.push(cursor);
-    }
-  },
-
-  pageTouchMove: function (event) {
-    for (let i in event.changedTouches) {
-      var idx = this.findCursor(event.changedTouches[i].identifier);
-      this.cursors[idx].copy(event.changedTouches[i]);
-    }
-    // console.log(this.cursors[0].x, this.cursors[0].y);
-    console.log(event)
-  },
-
-  pageTouchEnd: function (event) {
-    for (let i in event.changedTouches) {
-      var idx = this.findCursor(event.changedTouches[i].identifier);
-      this.cursors.splice(idx, 1);
-    }
-  },
-
-  pageTouchCancel: function (event) {
-
-  },
-
+  pulserTouchStart: pulserTouchStart,
+  pulserTouchMove: pulserTouchMove,
+  pulserTouchEnd: pulserTouchEnd,
+  pulserTouchCancel: pulserTouchCancel,
   onLoad: onLoad
 })
