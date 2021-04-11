@@ -1,6 +1,7 @@
 import Pixel from "Pixel";
 import Cursor from "Cursor";
 import PixelPos from "PixelPos";
+import {hsv2rgb} from "../../utils/Color"
 // import * as mqtt from "../../utils/mqtt.min.4.1.10"
 var mqtt = require("../../utils/mqtt.min.4.1.10.js")
 
@@ -10,9 +11,9 @@ const DPR = getApp().globalData.dpr;
 const PixelLen = PixelPos.length;
 const PixelRad = 30;
 const TouchBox = 100;
-const CanvasWidth = 700;
-const CanvasHeight = 700;
-const PixelColors = [190, 0.8, 0.9, 5, 35];
+const CanvasWidth = 750;
+const CanvasHeight = 750;
+const PixelColors = [0, 0.8, 0.9, 5, 35];
 
 var pixels = [];
 var cursors = [];
@@ -104,10 +105,32 @@ function onLoad() {
   // })
 }
 
+function changeHue(event) {
+  let h = event.detail.value;
+  console.log(h,`rgb(${hsv2rgb(h, 1 ,1)})`)
+  PixelColors[0] = h;
+  this.setData({
+    colorRes: `rgb(${hsv2rgb(h, 1 ,1)})`
+  })
+}
+
+// const page = {
+//   pulserTouchStart: pulserTouchStart,
+//   pulserTouchMove: pulserTouchMove,
+//   pulserTouchEnd: pulserTouchEnd,
+//   pulserTouchCancel: pulserTouchCancel,
+//   changeHue: changeHue,
+//   onLoad: onLoad
+// }
+
 Page({
+  data: {
+    colorRes: "red"
+  },
   pulserTouchStart: pulserTouchStart,
   pulserTouchMove: pulserTouchMove,
   pulserTouchEnd: pulserTouchEnd,
   pulserTouchCancel: pulserTouchCancel,
+  changeHue: changeHue,
   onLoad: onLoad
 })

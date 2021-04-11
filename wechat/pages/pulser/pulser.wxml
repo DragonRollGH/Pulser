@@ -1,10 +1,23 @@
-<view style="text-align: center; display: flex; justify-content: center;"
-  catchtouchstart="pulserTouchStart"
-  catchtouchmove="pulserTouchMove"
-  catchtouchend="pulserTouchEnd"
-  catchtouchcancel="pulserTouchCancel">
-  <canvas style="width: 700rpx; height: 700rpx;" canvas-id="Canvas"></canvas>
+<view class="center">
+  <canvas style="width: 750rpx; height: 750rpx;"
+  disable-scroll="true"
+  canvas-id="Canvas"
+  bindtouchstart="pulserTouchStart"
+  bindtouchmove="pulserTouchMove"
+  bindtouchend="pulserTouchEnd"
+  bindtouchcancel="pulserTouchCancel"></canvas>
 </view>
-<view style="text-align: center; display: flex; justify-content: center;">
-  <image style="width: 300rpx; height: 300rpx;"src="../../img/avatar.jpg" mode="aspectFit"></image>
+
+<view class="center">
+  <slider bindchanging="changeHue"
+  activeColor="transparent"
+  backgroundColor="transparent"
+  class="ribbon"
+  max="359"
+  value="{{hsv.h}}"
+  block-color="{{colorRes}}"/>
+</view>
+
+<view class="center">
+  <image style="width: 300rpx; height: 300rpx;" src="../../img/avatar.jpg" mode="aspectFit"></image>
 </view>

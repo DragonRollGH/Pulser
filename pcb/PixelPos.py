@@ -14,7 +14,7 @@ CAD = [
 
 Width = 700
 Ratio = Width / 50
-Offset = Width / 2
+Offset = 750 / 2
 
 CVS1 = [[round(Offset + i[0] * Ratio,2), round(Offset - i[1] * Ratio,2)] for i in CAD]
 
