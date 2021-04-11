@@ -1,5 +1,8 @@
 <view style="text-align: center; display: flex; justify-content: center;">
-  <canvas style="width: 600rpx; height: 600rpx;" canvas-id="myCanvas">
+  <canvas id="Canvas" style="width: 600rpx; height: 600rpx;" canvas-id="Canvas"
+  bindtouchstart="handleTouchStart"
+  bindtouchmove="handleTouchMove"
+  bindtouchend="handleTouchEnd">
   </canvas>
   <!-- <image style="position: absolute; width: 600rpx; height: 600rpx;" src="../../img/Heart_v1.1.png" mode="aspectFit"
     bindtouchstart="handleTouchStart" bindtouchmove="handleTouchMove" bindtouchend="handleTouchEnd">

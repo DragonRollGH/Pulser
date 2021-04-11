@@ -1,122 +1,141 @@
-const PixelPositions = [
-  [0,10.5966],
-  [-4.2579,14.7652],
-  [-9.7407,16.8550],
-  [-15.4258,15.4034],
-  [-19.2355,10.9408],
-  [-19.7774,5.0983],
-  [-16.8597,0.0047],
-  [-12.6448,-4.2102],
-  [-8.4298,-8.4251],
-  [-4.2149,-12.6401],
-  [0,-16.8550],
-  [4.2149,-12.6401],
-  [8.4298,-8.4251],
-  [12.6448,-4.2102],
-  [16.8597,0.0047],
-  [19.7774,5.0983],
-  [19.2355,10.9408],
-  [15.4258,15.4034],
-  [9.7407,16.8550],
-  [4.2579,14.7652]
+const PixelPos = [
+  // [0,0],
+  [300.0000, 172.8408],
+  [248.9052, 122.8176],
+  [183.1116, 97.7400],
+  [114.8904, 115.1592],
+  [69.1740, 168.7104],
+  [62.6712, 238.8204],
+  [97.6836, 299.9436],
+  [148.2624, 350.5224],
+  [198.8424, 401.1012],
+  [249.4212, 451.6812],
+  [300.0000, 502.2600],
+  [350.5788, 451.6812],
+  [401.1576, 401.1012],
+  [451.7376, 350.5224],
+  [502.3164, 299.9436],
+  [537.3288, 238.8204],
+  [530.8260, 168.7104],
+  [485.1096, 115.1592],
+  [416.8884, 97.7400],
+  [351.0948, 122.8176]
 ]
+const app = getApp();
+const ctx = wx.createCanvasContext("Canvas");
 
-const ctx = wx.createCanvasContext("myCanvas")
+const DPR = app.globalData.dpr;
+const TWOPI = Math.PI * 2;
+const PixelLen = 20;
+const TouchBoxR = 35;
+const DisplayR = 35;
+const CanvasWidth = 600;
+const CanvasHeight = 600;
+
+var pixels = [];
+var cursors = [];
+
+function initCanvas(ctx) {
+  ctx.scale(1 / DPR, 1 / DPR);
+  ctx.fillStyle = "red";
+  // ctx.beginPath();
+  // ctx.arc(300, 300, DisplayR, 0, TWOPI);
+  // ctx.closePath();
+  // ctx.fill();
+  // ctx.fillRect(0, 0, 300, 300);
+  ctx.draw();
+}
+
+function animate() {
+  // for (let i in cursors) {
+  //   cursors[i].updata()
+  //   // runCursoredPixel(cursors[i].pixelIds, webPixels);
+  // }
+  ctx.clearRect(0, 0, CanvasWidth, CanvasHeight);
+  ctx.scale(1 / DPR, 1 / DPR);
+  for (let i in pixels) {
+    pixels[i].updata();
+    pixels[i].draw(ctx);
+  }
+  ctx.draw();
+}
 
 class Cursor {
   constructor() {
-      this.x = undefined;
-      this.y = undefined;
-      this.identifier = undefined;
-      this.webPixelIds = [undefined, undefined];      //index 0 is the new id, 1 is the old id
-      this.devPixelIds = [undefined, undefined];      //index 0 is the new id, 1 is the old id
+    this.x = undefined;
+    this.y = undefined;
+    this.identifier = undefined;
+    this.pixelIds = [undefined, undefined]; //index 0 is the old id, 1 is the new id
   }
   copy(cursor) {
-      this.x = cursor.pageX;// - CanvasCenterPageX;
-      this.y = cursor.pageY;// - CanvasCenterPageX;
-      this.identifier = cursor.identifier;
+    this.x = cursor.X * DPR;
+    this.y = cursor.Y * DPR;
+    this.identifier = cursor.identifier;
   }
   clear() {
-      this.x = undefined;
-      this.y = undefined;
-      this.identifier = undefined;
+    this.x = undefined;
+    this.y = undefined;
+    this.identifier = undefined;
   }
   updata() {
-      if (this.x == undefined || this.y == undefined) {
-          this.webPixelIds = [undefined, undefined];
-          this.devPixelIds = [undefined, undefined];
-          return
+    this.pixelIds[0] = this.pixelIds[1];
+    this.pixelIds[1] = undefined;
+    if (this.x == undefined || this.y == undefined) {
+      this.pixelIds[0] = undefined;
+      return
+    }
+    for (let i in PixelLen) {
+      dis = Math.sqrt((this.x - PixelPos[i][0]) ** 2 + (this.y - PixelPos[i][1]) ** 2);
+      if (dis <= TouchBoxR) {
+        this.pixelIds[1] = i;
+        break;
       }
-      this.r = Math.sqrt(this.x ** 2 + this.y ** 2);
-      this.t = Math.atan2(this.y, this.x);
-      if (TouchRegionMin < this.r && this.r < TouchRegionMax) {
-          if (this.webPixelIds[1] >= 0) {
-              this.webPixelIds[0] = this.webPixelIds[1];
-              this.devPixelIds[0] = this.devPixelIds[1];
-          }
-          this.webPixelIds[1] = (Math.floor(this.t / WebPixelRad) + WebPixelLen) % WebPixelLen;
-          this.devPixelIds[1] = (Math.floor(this.t / DevPixelRad) + DevPixelLen) % DevPixelLen;
-      } else {
-          this.webPixelIds = [undefined, undefined];
-          this.devPixelIds = [undefined, undefined];
-      }
+    }
   }
 }
 
 class Pixel {
-  constructor(id, pixelRad) {
-      this.id = id
-      this.pixelRad = pixelRad;
-      this.startRad = (this.id - 0.5) * this.pixelRad;
-      this.endRad = this.startRad + this.pixelRad;
-      this.active = false;
+  constructor(id) {
+    this.id = id
+    this.active = false;
   }
   run() {
-      this.active = true;
-      this.liveTime = 5;
-      this.deadTime = 35;
-      this.brightness = 0.8;
-      this.hue = 0;
-      this.alpha = this.brightness;
+    this.active = true;
+    this.H = 0;
+    this.S = 1;
+    this.L = 0.5
+    this.A = 5;
+    this.deltaL = this.L / 35;
   }
 
-  getWebColor() {
-      this.webColor = "rgb(" + hsv2rgb(this.hue, this.alpha, 1).join() + ")";
-      return this.webColor;
-  }
-  getDevColor() {
-      this.devColor = hsv2rgb(this.hue, 1, this.alpha);
-      return this.devColor
-  }
   draw(ctx) {
-      if (this.active) {
-          ctx.beginPath();
-          ctx.arc(CanvasCenterX, CanvasCenterY, TouchRegionMax, this.startRad, this.endRad);
-          ctx.lineTo(CanvasCenterX, CanvasCenterY);
-          ctx.closePath();
-          ctx.fillStyle = this.getWebColor();
-          ctx.fill();
-      }
+    if (this.active) {
+      // ctx.scale(1 / DPR, 1 / DPR);
+      ctx.fillStyle = `red`;
+      // ctx.fillStyle = `hsl(${this.H},${this.S},${this.L})`;
+      // ctx.fillStyle(`hsl(${this.H},${this.S},${this.L})`);
+      ctx.beginPath();
+      ctx.arc(PixelPos[this.id][0], PixelPos[this.id][1], DisplayR, 0, TWOPI);
+      ctx.closePath();
+      ctx.fill();
+    }
   }
   updata() {
-      if (this.active) {
-          if (this.liveTime) {
-              this.liveTime -= 1;
-          } else if (this.alpha > 0) {
-              this.alpha -= this.brightness / this.deadTime;
-          } else {
-              this.active = false;
-          }
+    if (this.active) {
+      if (this.A) {
+        this.A -= 1;
+      } else {
+        this.L -= this.deltaL;
+        if (this.L <= 0) {
+          this.active = false;
+        }
       }
+    }
   }
 }
 
-// const qry = wx.createSelectorQuery()
-
 
 Page({
-  cursors: [],
-
   findCursor: function (identifier) {
     for (let i in this.cursors) {
       if (this.cursors[i].identifier == identifier) {
@@ -125,7 +144,7 @@ Page({
     }
   },
 
-  handleTouchStart: function (event) {
+  pageTouchStart: function (event) {
     for (let i in event.changedTouches) {
       var cursor = new Cursor();
       cursor.copy(event.changedTouches[i]);
@@ -133,38 +152,33 @@ Page({
     }
   },
 
-  handleTouchMove: function (event) {
+  pageTouchMove: function (event) {
     for (let i in event.changedTouches) {
       var idx = this.findCursor(event.changedTouches[i].identifier);
       this.cursors[idx].copy(event.changedTouches[i]);
     }
-    console.log(this.cursors[0].x, this.cursors[0].y);
+    // console.log(this.cursors[0].x, this.cursors[0].y);
+    console.log(event)
   },
 
-  handleTouchEnd: function (event) {
+  pageTouchEnd: function (event) {
     for (let i in event.changedTouches) {
       var idx = this.findCursor(event.changedTouches[i].identifier);
       this.cursors.splice(idx, 1);
     }
   },
 
-  handleTouchCancel: function (event) {
+  pageTouchCancel: function (event) {
 
   },
-  draw: function (event) {
-    var pr = 750 / wx.getSystemInfoSync().windowWidth;
-    ctx.scale(1/pr, 1/pr)
-    ctx.setFillStyle("red")
-    for (let i in PixelPositions) {
-      ctx.beginPath()
-      ctx.arc(300+PixelPositions[i][0]*12, 300-PixelPositions[i][1]*12, 20, 0, 2*Math.PI)
-      ctx.closePath()
-      ctx.fill()
-    }
-    // ctx.fillRect(0,0,300,300)
-    ctx.draw()
-  },
   onLoad: function (event) {
-    this.draw()
+    for (let i = 0; i < PixelLen; i++) {
+      pixels.push(new Pixel(i));
+      pixels[i].run();
+    }
+    // cursors.push(new Cursor());
+    initCanvas(ctx);
+    setInterval(animate, 1000);
+    animate();
   }
 })

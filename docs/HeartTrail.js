@@ -47,7 +47,7 @@ const TWOPI = Math.PI * 2;
 
 const WebPixelLen = 200;          //页面的像素数
 const WebPixelRad = TWOPI / WebPixelLen;
-const DevPixelLen = 16;           //设备的像素数
+const DevPixelLen = 20;           //设备的像素数
 const DevPixelRad = TWOPI / DevPixelLen;
 const TouchRegionMin = 30;
 const TouchRegionMax = 150;
