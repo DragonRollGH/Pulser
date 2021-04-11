@@ -1,3 +1,5 @@
+import Pixel from "Pixel"
+
 const PixelPos = [
   // [0,0],
   [300.0000, 172.8408],
@@ -20,15 +22,15 @@ const PixelPos = [
   [485.1096, 115.1592],
   [416.8884, 97.7400],
   [351.0948, 122.8176]
-]
+];
 const app = getApp();
 const ctx = wx.createCanvasContext("Canvas");
 
 const DPR = app.globalData.dpr;
-const TWOPI = Math.PI * 2;
+
 const PixelLen = 20;
 const TouchBoxR = 35;
-const DisplayR = 35;
+const DisplayR = 30;
 const CanvasWidth = 600;
 const CanvasHeight = 600;
 
@@ -37,12 +39,18 @@ var cursors = [];
 
 function initCanvas(ctx) {
   ctx.scale(1 / DPR, 1 / DPR);
-  ctx.fillStyle = "red";
+  // ctx.fillStyle = "rgba(255,0,0,0.5)";
+  // ctx.fillStyle = `rgba(${hsl2rgba(0,1,0.5)})`;
   // ctx.beginPath();
   // ctx.arc(300, 300, DisplayR, 0, TWOPI);
   // ctx.closePath();
   // ctx.fill();
   // ctx.fillRect(0, 0, 300, 300);
+  // let grd = ctx.createCircularGradient(50, 50, 30)
+  // grd.addColorStop(0, 'red')
+  // grd.addColorStop(1, 'white')
+  // ctx.fillStyle = grd;
+  // ctx.fillRect(10, 10, 150, 80)
   ctx.draw();
 }
 
@@ -94,46 +102,19 @@ class Cursor {
   }
 }
 
-class Pixel {
-  constructor(id) {
-    this.id = id
-    this.active = false;
-  }
-  run() {
-    this.active = true;
-    this.H = 0;
-    this.S = 1;
-    this.L = 0.5
-    this.A = 5;
-    this.deltaL = this.L / 35;
-  }
 
-  draw(ctx) {
-    if (this.active) {
-      // ctx.scale(1 / DPR, 1 / DPR);
-      ctx.fillStyle = `red`;
-      // ctx.fillStyle = `hsl(${this.H},${this.S},${this.L})`;
-      // ctx.fillStyle(`hsl(${this.H},${this.S},${this.L})`);
-      ctx.beginPath();
-      ctx.arc(PixelPos[this.id][0], PixelPos[this.id][1], DisplayR, 0, TWOPI);
-      ctx.closePath();
-      ctx.fill();
-    }
+
+
+function onLoad () {
+  for (let i = 0; i < PixelLen; i++) {
+    pixels.push(new Pixel(PixelPos[i][0], PixelPos[i][1], DisplayR));
+    pixels[i].run(0,1,0.9,15,35);
   }
-  updata() {
-    if (this.active) {
-      if (this.A) {
-        this.A -= 1;
-      } else {
-        this.L -= this.deltaL;
-        if (this.L <= 0) {
-          this.active = false;
-        }
-      }
-    }
-  }
+  cursors.push(new Cursor());
+  initCanvas(ctx);
+  setInterval(animate, 100);
+  animate();
 }
-
 
 Page({
   findCursor: function (identifier) {
@@ -171,14 +152,6 @@ Page({
   pageTouchCancel: function (event) {
 
   },
-  onLoad: function (event) {
-    for (let i = 0; i < PixelLen; i++) {
-      pixels.push(new Pixel(i));
-      pixels[i].run();
-    }
-    // cursors.push(new Cursor());
-    initCanvas(ctx);
-    setInterval(animate, 1000);
-    animate();
-  }
+
+  onLoad: onLoad
 })

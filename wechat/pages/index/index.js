@@ -1,4 +1,4 @@
-var MD5 = require("../../utils/MD5.js");
+import md5 from "../../utils/MD5.js"
 
 Page({
   users: [
@@ -8,7 +8,7 @@ Page({
   verify: function(inputname) {
     let errorUsername = true
     for(let i in this.users) {
-      if (MD5.md5(MD5.md5(inputname)) == this.users[i]) {
+      if (md5(md5(inputname)) == this.users[i]) {
         errorUsername = false
         this.setData({
           errorUsername: false

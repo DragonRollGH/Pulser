@@ -262,6 +262,4 @@
     return raw_hmac_md5(key, string);
   }
 
-module.exports = {
-  md5: md5
-}
+export default md5;
