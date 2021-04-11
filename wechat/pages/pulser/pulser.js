@@ -23,23 +23,6 @@ function findCursor(identifier, cursors) {
   }
 }
 
-function initCanvas(ctx) {
-  ctx.scale(1 / DPR, 1 / DPR);
-  // ctx.fillStyle = "rgba(255,0,0,0.5)";
-  // ctx.fillStyle = `rgba(${hsl2rgba(0,1,0.5)})`;
-  // ctx.beginPath();
-  // ctx.arc(300, 300, PixelRad, 0, TWOPI);
-  // ctx.closePath();
-  // ctx.fill();
-  // ctx.fillRect(0, 0, 300, 300);
-  // let grd = ctx.createCircularGradient(50, 50, 30)
-  // grd.addColorStop(0, 'red')
-  // grd.addColorStop(1, 'white')
-  // ctx.fillStyle = grd;
-  // ctx.fillRect(10, 10, 150, 80)
-  ctx.draw();
-}
-
 function animate() {
   for (let i in cursors) {
     cursors[i].updata()
@@ -85,12 +68,11 @@ function pulserTouchCancel(event) {
 }
 
 function onLoad() {
+  wx.hideHomeButton();
   for (let i = 0; i < PixelLen; i++) {
     pixels.push(new Pixel(PixelPos[i][0], PixelPos[i][1], PixelRad));
-    pixels[i].run(PixelColors);
   }
   // cursors.push(new Cursor());
-  initCanvas(ctx);
   setInterval(animate, 17);
   animate();
 }
