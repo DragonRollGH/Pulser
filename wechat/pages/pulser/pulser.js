@@ -105,9 +105,10 @@ function onLoad() {
   // })
 }
 
+function preventDefault() {}
+
 function changeHue(event) {
   let h = event.detail.value;
-  console.log(h,`rgb(${hsv2rgb(h, 1 ,1)})`)
   PixelColors[0] = h;
   this.setData({
     colorRes: `rgb(${hsv2rgb(h, 1 ,1)})`

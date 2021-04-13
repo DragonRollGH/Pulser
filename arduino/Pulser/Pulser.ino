@@ -10,8 +10,9 @@
 
 const byte PixelLen = 20;
 const byte FrameRate = 17; // =1000ms/60fps
+const byte TouchPin = 12;
 const char *AP_SSID = "Rolls_Pulser";
-const char *Name = "Roll";
+const char *Name = "Roll_v1.0.04131232";
 
 // const char *MQTTServer = "";
 // const int   MQTTPort = 1883;
@@ -37,12 +38,28 @@ byte sleep = sleepIdle;
 unsigned int flowFrame;
 unsigned long flowStart;
 
+unsigned int test = 0;
+unsigned long start;
+unsigned long end;
+
 WiFiClient WLAN;
 MQTTClient MQTT(512);
 
 WiFiManager WM;
 
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> heart(PixelLen);
+
+// class Touch
+// {
+// public:
+//     void begin(pin)
+//     {
+//         pinMode(pin, INPUT)
+//         attachInterrupt(pin, )
+//     }
+
+//     void
+// }
 
 class Pixel
 {
@@ -150,6 +167,9 @@ void mqttMsg(String &topic, String &payload)
         case 'A':
             cmdACK();
             break;
+        case 'B':
+            cmdBattery();
+            break;
         case 'D':
             cmdDefault(payload);
             break;
@@ -175,6 +195,18 @@ void mqttMsg(String &topic, String &payload)
 void cmdACK(void)
 {
     MQTT.publish(MQTTPub, Name);
+}
+
+void cmdBattery(void)
+{
+    unsigned int adcs = 0;
+    for (byte i = 0; i < 10; i++)
+    {
+        adcs += analogRead(A0);
+        delay(10);
+    }
+    float voltage = (adcs / 10) * 247.0f / 1024 / 47;
+    MQTT.publish(MQTTPub, String(voltage));
 }
 
 void cmdDefault(String &payload) {}
@@ -351,6 +383,12 @@ void setup()
 
 void loop()
 {
+    // test = (test + 1) % 1000;
+    // if (test == 0)
+    // {
+    //     start = millis();
+    // }
+
     if (!MQTT.connected())
     {
         mqttConnect();
@@ -371,6 +409,12 @@ void loop()
             runFlow();
         }
     }
+
+    // if (test == 0)
+    // {
+    //     end = millis();
+    //     MQTT.publish(MQTTPub, String(end) + ": " + String(end - start));
+    // }
 
     delay(sleep);
 }
