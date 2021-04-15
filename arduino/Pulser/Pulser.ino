@@ -6,13 +6,18 @@
 #include <ESP8266httpUpdate.h>
 #include <MQTT.h>
 #include <NeoPixelBus.h>
+#include <OneButton.h>
 #include <WiFiManager.h>
+#include <Wire.h>
+
+// const int MPU = 0x68;  //MPU-6050的I2C地址
+// const int nValCnt = 4; //一次读取寄存器的数量
 
 const byte PixelLen = 20;
 const byte FrameRate = 17; // =1000ms/60fps
-const byte TouchPin = 12;
+const byte PinTouch = 12;
 const char *AP_SSID = "Rolls_Pulser";
-const char *Name = "Roll_v1.0.04131232";
+const char *Name = "Roll_v1.0.04142249";
 
 // const char *MQTTServer = "";
 // const int   MQTTPort = 1883;
@@ -31,7 +36,7 @@ byte L = 50;
 byte A = 5;
 byte B = 35;
 byte sleepRun = 1;
-byte sleepIdle = 100;
+byte sleepIdle = 50; // > 300 is useless
 unsigned int flowCache = 1;
 
 byte sleep = sleepIdle;
@@ -49,17 +54,102 @@ WiFiManager WM;
 
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> heart(PixelLen);
 
-// class Touch
+OneButton button(PinTouch);
+
+// class MenuSystem
 // {
 // public:
-//     void begin(pin)
+//     byte tapType[5];
+//     void (*callback)();
+//     MenuSystem()
+//     {}
+//     MenuSystem(byte tT[], void (*cb)())
 //     {
-//         pinMode(pin, INPUT)
-//         attachInterrupt(pin, )
+//         for (byte i = 0; i < 5; ++i)
+//         {
+//             tapType[i] = tT[i];
+//         }
+//         callback = cb;
 //     }
+// };
+// MenuSystem menu[6];
+// byte menuCurrent = 0;
 
-//     void
+
+// void menuHome()
+// {
+//     Serial.println("Home");
 // }
+// void menuMain()
+// {
+//     Serial.println("Main");
+// }
+// void menuAck()
+// {
+//     Serial.println("Ack");
+// }
+// void menuBattery()
+// {
+//     Serial.println("Battery");
+// }
+// void menuPulse()
+// {
+//     Serial.println("Pulse");
+// }
+// void menuSubmenu()
+// {
+//     Serial.println("Submenu");
+// }
+ICACHE_RAM_ATTR void checkTicks()
+{
+    button.tick();
+}
+// void pressStop()
+// {
+//     Serial.println("pressStop");
+// }
+// void singleClick()
+// {
+//     Serial.println("singleClick");
+// }
+// void doubleClick()
+// {
+//     Serial.println("doubleClick");
+// }
+// void multiClick()
+// {
+//     Serial.println("multiClick");
+// }
+// void pressStart()
+// {
+//     Serial.println("pressStart");
+// }
+// void pressStop()
+// {
+//     menuCurrent = menu[menuCurrent].tapType[0];
+//     menu[menuCurrent].callback();
+// }
+// void singleClick()
+// {
+//     menuCurrent = menu[menuCurrent].tapType[1];
+//     menu[menuCurrent].callback();
+// }
+// void doubleClick()
+// {
+//     menuCurrent = menu[menuCurrent].tapType[2];
+//     menu[menuCurrent].callback();
+// }
+// void multiClick()
+// {
+//     menuCurrent = menu[menuCurrent].tapType[3];
+//     menu[menuCurrent].callback();
+// }
+// void pressStart()
+// {
+//     menuCurrent = menu[menuCurrent].tapType[4];
+//     menu[menuCurrent].callback();
+// }
+
 
 class Pixel
 {
@@ -121,6 +211,14 @@ public:
         }
     }
 
+    void write(String w)
+    {
+        for(int i = 0; i < w.length(); ++i)
+        {
+            write(w[i]);
+        }
+    }
+
     byte read(void)
     {
         if (avalible == 0)
@@ -141,7 +239,7 @@ public:
         avalible -= ui;
     }
 };
-ByteStream BS;
+ByteStream stream;
 
 void mqttConnect(void)
 {
@@ -217,7 +315,7 @@ void cmdHSL(String &payload)
     {
         for (unsigned int i = 2; i < payload.length(); i++)
         {
-            BS.write(payload[i]);
+            stream.write(payload[i]);
         }
     }
 }
@@ -246,36 +344,36 @@ void setPixelsColor(void)
 {
     ++flowFrame;
     bool running = 1;
-    while (BS.avalible && running)
+    while (stream.avalible && running)
     {
-        switch (BS.read())
+        switch (stream.read())
         {
         case '&':
-            switch (BS.read())
+            switch (stream.read())
             {
             case 'D':
                 useDefault();
                 break;
             case 'H':
-                H = toByte(BS.read(), BS.read());
+                H = toByte(stream.read(), stream.read());
                 break;
             case 'S':
-                S = toByte(BS.read(), BS.read());
+                S = toByte(stream.read(), stream.read());
                 break;
             case 'L':
-                L = toByte(BS.read(), BS.read());
+                L = toByte(stream.read(), stream.read());
                 break;
             case 'A':
-                A = toByte(BS.read(), BS.read());
+                A = toByte(stream.read(), stream.read());
                 break;
             case 'B':
-                B = toByte(BS.read(), BS.read());
+                B = toByte(stream.read(), stream.read());
                 break;
             case 'C':
-                setHSL(BS.read(), BS.read(), BS.read(), BS.read());
+                setHSL(stream.read(), stream.read(), stream.read(), stream.read());
                 break;
             case 'N':
-                runPixels(BS.read(), BS.read(), BS.read(), BS.read());
+                runPixels(stream.read(), stream.read(), stream.read(), stream.read());
                 break;
             default:
                 break;
@@ -366,6 +464,60 @@ void stopFlow(void)
     pinMode(3, INPUT);
 }
 
+// //向MPU6050写入一个字节的数据
+// //指定寄存器地址与一个字节的值
+// void WriteMPUReg(int nReg, unsigned char nVal)
+// {
+//     Wire.beginTransmission(MPU);
+//     Wire.write(nReg);
+//     Wire.write(nVal);
+//     Wire.endTransmission(true);
+// }
+
+// //从MPU6050读出加速度计三个分量、温度和三个角速度计
+// //保存在指定的数组中
+// void ReadAccGyr(int *pVals)
+// {
+//     Wire.beginTransmission(MPU);
+//     Wire.write(0x3B);
+//     Wire.requestFrom(MPU, nValCnt * 2, true);
+//     Wire.endTransmission(true);
+//     for (long i = 0; i < nValCnt; ++i)
+//     {
+//         pVals[i] = Wire.read() << 8 | Wire.read();
+//     }
+// }
+
+// //对读数进行纠正，消除偏移，并转换为物理量。公式见文档。
+// void Rectify(int *pReadout, float *pRealVals)
+// {
+//     for (int i = 0; i < 3; ++i)
+//     {
+//         pRealVals[i] = pReadout[i] / 16384.0f;
+//     }
+//     pRealVals[3] = pReadout[3] / 340.0f + 36.53;
+// }
+
+// void MPUloop(void)
+// {
+//     int readouts[nValCnt];
+//     ReadAccGyr(readouts); //读出测量值
+
+//     float realVals[4];
+//     Rectify(readouts, realVals); //根据校准的偏移量进行纠正
+
+//     Serial.print("aX: ");
+//     Serial.print(String(realVals[0]));
+//     Serial.print("| aY: ");
+//     Serial.print(String(realVals[1]));
+//     Serial.print("| aZ: ");
+//     Serial.print(String(realVals[2]));
+//     Serial.print("| Tp: ");
+//     Serial.print(String(realVals[3]));
+//     Serial.println();
+//     delay(10);
+// }
+
 void setup()
 {
     // Serial.begin(115200);
@@ -377,6 +529,22 @@ void setup()
 
     MQTT.begin(MQTTServer, MQTTPort, WLAN);
     MQTT.onMessage(mqttMsg);
+
+    // Wire.begin();
+    // WriteMPUReg(0x6B, 0);
+    // MenuSystem m0({ 0, 1, 2, 3, 4 }, menuHome); //0
+    // MenuSystem m1({ 0, 5, 2, 3, 4 }, menuMain);     //1
+    // MenuSystem m2({ 0, 0, 0, 3, 4 }, menuACK);      //2
+    // MenuSystem m3({ 0, 0, 2, 0, 4 }, menuBattery);  //3
+    // MenuSystem m4({ 0, 0, 0, 0, 0 }, menuPulse);    //4
+    // MenuSystem m5({ 0, 0, 2, 3, 4 }, menuSubmenu);  //5
+    // menu = {m0,m1,m2,m3,m4,m5};
+    attachInterrupt(digitalPinToInterrupt(PinTouch), checkTicks, CHANGE);
+    button.attachClick([]() {stream.write("&NgAAA;");});
+    button.attachDoubleClick([]() {stream.write("&NwAAA;");});
+    button.attachMultiClick([]() {stream.write("&N4AAA;");});
+    button.attachLongPressStart([]() {stream.write("&N+AAA;");});
+    button.attachLongPressStop([]() {stream.write("&N+AAA;");});
 
     // Serial.println("\nESP OK");
 }
@@ -404,11 +572,13 @@ void loop()
     }
     else
     {
-        if (BS.avalible >= flowCache)
+        if (stream.avalible >= flowCache)
         {
             runFlow();
         }
     }
+
+    // MPUloop();
 
     // if (test == 0)
     // {
