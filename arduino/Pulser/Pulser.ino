@@ -17,7 +17,7 @@ const byte PixelLen = 20;
 const byte FrameRate = 17; // =1000ms/60fps
 const byte PinTouch = 12;
 const char *AP_SSID = "Rolls_Pulser";
-const char *Name = "Roll_v1.0.04142249";
+const char *Name = "Roll_v1.0.04152033";
 
 // const char *MQTTServer = "";
 // const int   MQTTPort = 1883;
@@ -54,7 +54,7 @@ WiFiManager WM;
 
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> heart(PixelLen);
 
-OneButton button(PinTouch);
+OneButton button(PinTouch, false, false);
 
 // class MenuSystem
 // {
@@ -303,7 +303,7 @@ void cmdBattery(void)
         adcs += analogRead(A0);
         delay(10);
     }
-    float voltage = (adcs / 10) * 247.0f / 1024 / 47;
+    float voltage = (adcs / 10) * 247.0f / 1024 / 47 - 0.19;
     MQTT.publish(MQTTPub, String(voltage));
 }
 
@@ -386,13 +386,13 @@ void setPixelsColor(void)
             break;
         }
     }
-    running = 0;
+    bool anyActive = 0;
     for (byte i = 0; i < PixelLen; i++)
     {
         if (pixels[i].active)
         {
             heart.SetPixelColor(i, HslColor(pixels[i].H, pixels[i].S, pixels[i].L));
-            running = 1;
+            anyActive = 1;
         }
         else
         {
@@ -401,7 +401,7 @@ void setPixelsColor(void)
         pixels[i].update();
     }
     heart.Show();
-    if (!running)
+    if (!anyActive)
     {
         stopFlow();
     }
@@ -521,6 +521,9 @@ void stopFlow(void)
 void setup()
 {
     // Serial.begin(115200);
+    stream.write("&L05&N////;");
+    runFlow();
+    setPixelsColor();
 
     WiFi.mode(WIFI_STA);
     WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
@@ -543,9 +546,10 @@ void setup()
     button.attachClick([]() {stream.write("&NgAAA;");});
     button.attachDoubleClick([]() {stream.write("&NwAAA;");});
     button.attachMultiClick([]() {stream.write("&N4AAA;");});
-    button.attachLongPressStart([]() {stream.write("&N+AAA;");});
+    button.attachLongPressStart([]() {stream.write("&N8AAA;");});
     button.attachLongPressStop([]() {stream.write("&N+AAA;");});
 
+    stream.write("&N////;");
     // Serial.println("\nESP OK");
 }
 
@@ -562,6 +566,8 @@ void loop()
         mqttConnect();
     }
     MQTT.loop();
+
+    button.tick();
 
     if (flowStart)
     {

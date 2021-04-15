@@ -5,6 +5,14 @@ import {hsv2rgb} from "../../utils/Color"
 // import * as mqtt from "../../utils/mqtt.min.4.1.10"
 var mqtt = require("../../utils/mqtt.min.4.1.10.js")
 
+const mqttOptions = {
+  connectTimeout: 4000,  //超时时间
+  clientId: 'wx_' + parseInt(Math.random() * 100 + 800, 10),
+  // port: 443,
+  username: "thingidp@ajdnaud|WebTest",
+  password: "e6501f1b98c48378480bab53e5f3c8dc"
+}
+
 const ctx = wx.createCanvasContext("Canvas");
 
 const DPR = getApp().globalData.dpr;
@@ -18,19 +26,14 @@ const PixelColors = [0, 0.8, 0.9, 5, 35];
 var pixels = [];
 var cursors = [];
 
-function findCursor(identifier, cursors) {
-  for (let i in cursors) {
-      if (cursors[i].identifier == identifier) {
-          return i;
-      }
-  }
-}
-
-function animate() {
+function runPixels() {
   for (let i in cursors) {
     cursors[i].updata()
     cursors[i].runPixels(pixels, PixelColors)
   }
+}
+
+function drawPixels(ctx) {
   ctx.clearRect(0, 0, CanvasWidth, CanvasHeight);
   ctx.scale(1 / DPR, 1 / DPR);
   for (let i in pixels) {
@@ -38,6 +41,41 @@ function animate() {
     pixels[i].draw(ctx);
   }
   ctx.draw();
+}
+
+function publishPixels() {
+  let argN = "";
+  for (let i in pixels) {
+    if (pixels[i].active) {
+      anyActive = 1;
+      argN += '1';
+    } else {
+      argN += '0';
+    }
+  }
+  if (anyActive) {
+    ++flowFrame;
+    stream += argN;
+  }
+  if (!anyActive || flowFrame == packetLen) {
+    mqttPub(stream);
+    stream = "";
+    flowFrame = 0
+  }
+}
+
+function animate() {
+  runPixels();
+  drawPixels(ctx);
+  publishPixels();
+}
+
+function findCursor(identifier, cursors) {
+  for (let i in cursors) {
+      if (cursors[i].identifier == identifier) {
+          return i;
+      }
+  }
 }
 
 function pulserTouchStart(event) {
@@ -78,13 +116,6 @@ function onLoad() {
   // cursors.push(new Cursor());
   setInterval(animate, 17);
   animate();
-  // const options = {
-  //   connectTimeout: 4000,  //超时时间
-  //   clientId: 'wx_' + parseInt(Math.random() * 100 + 800, 10),
-  //   // port: 443,
-  //   username: "thingidp@ajdnaud|WebTest",
-  //   password: "e6501f1b98c48378480bab53e5f3c8dc"
-  // }
 
   // var client = mqtt.connect('wxs://ajdnaud.iot.gz.baidubce.com/mqtt', options)
   // client.on('connect', (e) => {
@@ -105,8 +136,6 @@ function onLoad() {
   // })
 }
 
-function preventDefault() {}
-
 function changeHue(event) {
   let h = event.detail.value;
   PixelColors[0] = h;
@@ -114,15 +143,6 @@ function changeHue(event) {
     colorRes: `rgb(${hsv2rgb(h, 1 ,1)})`
   })
 }
-
-// const page = {
-//   pulserTouchStart: pulserTouchStart,
-//   pulserTouchMove: pulserTouchMove,
-//   pulserTouchEnd: pulserTouchEnd,
-//   pulserTouchCancel: pulserTouchCancel,
-//   changeHue: changeHue,
-//   onLoad: onLoad
-// }
 
 Page({
   data: {
@@ -133,5 +153,6 @@ Page({
   pulserTouchEnd: pulserTouchEnd,
   pulserTouchCancel: pulserTouchCancel,
   changeHue: changeHue,
+  preventDefault: ()=>{},
   onLoad: onLoad
 })
