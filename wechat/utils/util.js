@@ -16,11 +16,37 @@ export function hsv2rgb(h, s, v) {
     r = Math.round(255 * (r + m));
     g = Math.round(255 * (g + m));
     b = Math.round(255 * (b + m));
-    return [r, g, b]
+    return [r, g, b];
 }
 
 export function hsl2rgba(h, s, l) {
     let rgb = hsv2rgb(h, s, 1);
     rgb.push(l);
     return rgb;
+}
+
+export function btobit(bitString) {
+  let asciis = [];
+  for (let j = 0; j < Math.ceil(bitString.length / 8); ++j) {
+    let bitString = "";
+    for (let i = 0; i < 8; ++i) {
+      let ij = 8 * j + i;
+      if (ij < bitString.length) {
+        bitString += bitString[ij];
+      } else {
+        bitString += '0';
+      }
+    }
+    asciis.push(parseInt(bitString, 2));
+  }
+  return btoa(String.fromCharCode(...asciis));
+}
+
+export function bittob(baseString) {
+  let asciiString = atob(baseString);
+  let bitString = "";
+  for (let i = 0; i < asciiString.length; ++i) {
+    bitString += asciiString.charCodeAt(i).toString(2);
+  }
+  return bitString;
 }

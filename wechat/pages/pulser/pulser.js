@@ -1,7 +1,7 @@
 import Pixel from "Pixel";
 import Cursor from "Cursor";
 import PixelPos from "PixelPos";
-import {hsv2rgb} from "../../utils/Color"
+import {hsv2rgb} from "../../utils/util"
 // import * as mqtt from "../../utils/mqtt.min.4.1.10"
 var mqtt = require("../../utils/mqtt.min.4.1.10.js")
 
@@ -22,15 +22,42 @@ const TouchBox = 100;
 const CanvasWidth = 750;
 const CanvasHeight = 750;
 const PixelColors = [0, 0.8, 0.9, 5, 35];
+const flowPacketLen = 60;
 
 var pixels = [];
 var cursors = [];
+var flowFrame;
+var flowStream;
 
-function runPixels() {
-  for (let i in cursors) {
-    cursors[i].updata()
-    cursors[i].runPixels(pixels, PixelColors)
+function animate() {
+  runPixels();
+  drawPixels(ctx);
+  publishPixels();
+}
+
+function btobit(bitString) {
+  let bits = [];
+  for (let j = 0; j < Math.ceil(bitString.length / 8); ++j) {
+    let bit = "";
+    for (let i = 0; i < 8; ++i) {
+      let ij = 8 * j + i;
+      if (ij < bitString.length) {
+        bit += bitString[ij]
+      } else {
+        bit += '0'
+      }
+    }
+    bits.push(parseInt(bit,2));
   }
+  return btoa(String.fromCharCode(...bits))
+}
+
+function changeHue(event) {
+  let h = event.detail.value;
+  PixelColors[0] = h;
+  this.setData({
+    colorRes: `rgb(${hsv2rgb(h, 1 ,1)})`
+  })
 }
 
 function drawPixels(ctx) {
@@ -43,8 +70,79 @@ function drawPixels(ctx) {
   ctx.draw();
 }
 
+function findCursor(identifier, cursors) {
+  for (let i in cursors) {
+    if (cursors[i].identifier == identifier) {
+      return i;
+    }
+  }
+}
+
+function flowStart() {
+  flowFrame = 1;
+  flowStream = ":H"
+}
+
+function flowWriteN(argN) {
+  let arg = [];
+  for (let j = 0; j < Math.ceil(pixels.length / 8); ++j) {
+    arg.push("");
+    for (let i = 0; i < 8; ++i) {
+      let ij = 8 * j + i;
+      if (ij < argN.length) {
+        arg[j] += argN[ij]
+      } else {
+        arg[j] += '0'
+      }
+    }
+    // btoa(String.fromCharCode(255,255,255))
+  }
+  for (let i in pixels) {
+    Math.floor(i / 8);
+  }
+  argN.slice(0, 8);
+  flowStream += `&N${argN};`;
+  ++flowFrame;
+}
+
+function flowEnd() {
+  flowFrame = 0;
+  // mqttPub(flowStream);
+  console.log(flowStream);
+
+}
+
+function onLoad() {
+  wx.hideHomeButton();
+  for (let i = 0; i < PixelLen; i++) {
+    pixels.push(new Pixel(PixelPos[i][0], PixelPos[i][1], PixelRad));
+  }
+  // cursors.push(new Cursor());
+  setInterval(animate, 17);
+  animate();
+
+  // var client = mqtt.connect('wxs://ajdnaud.iot.gz.baidubce.com/mqtt', options)
+  // client.on('connect', (e) => {
+  //   console.log('成功连接服务器!')
+  //   this.setData({
+  //     ok:"Connected"
+  //   })
+  // })
+  // client.subscribe('Switch', {
+  //   qos: 0
+  // }, function (err) {
+  //   if (!err) {
+  //     console.log("订阅成功:Switch")
+  //   }
+  // })
+  // client.on('message', function (topic, message, packet) {
+  //   console.log(packet.payload.toString())
+  // })
+}
+
 function publishPixels() {
   let argN = "";
+  let anyActive = 0;
   for (let i in pixels) {
     if (pixels[i].active) {
       anyActive = 1;
@@ -54,27 +152,15 @@ function publishPixels() {
     }
   }
   if (anyActive) {
-    ++flowFrame;
-    stream += argN;
+    if (!flowFrame) {
+      flowStart();
+    }
+    flowWriteN(argN);
   }
-  if (!anyActive || flowFrame == packetLen) {
-    mqttPub(stream);
-    stream = "";
-    flowFrame = 0
-  }
-}
-
-function animate() {
-  runPixels();
-  drawPixels(ctx);
-  publishPixels();
-}
-
-function findCursor(identifier, cursors) {
-  for (let i in cursors) {
-      if (cursors[i].identifier == identifier) {
-          return i;
-      }
+  if (!anyActive || flowFrame == flowPacketLen) {
+    if (flowFrame) {
+      flowEnd();
+    }
   }
 }
 
@@ -108,51 +194,22 @@ function pulserTouchCancel(event) {
   }
 }
 
-function onLoad() {
-  wx.hideHomeButton();
-  for (let i = 0; i < PixelLen; i++) {
-    pixels.push(new Pixel(PixelPos[i][0], PixelPos[i][1], PixelRad));
+function runPixels() {
+  for (let i in cursors) {
+    cursors[i].updata()
+    cursors[i].runPixels(pixels, PixelColors)
   }
-  // cursors.push(new Cursor());
-  setInterval(animate, 17);
-  animate();
-
-  // var client = mqtt.connect('wxs://ajdnaud.iot.gz.baidubce.com/mqtt', options)
-  // client.on('connect', (e) => {
-  //   console.log('成功连接服务器!')
-  //   this.setData({
-  //     ok:"Connected"
-  //   })
-  // })
-  // client.subscribe('Switch', {
-  //   qos: 0
-  // }, function (err) {
-  //   if (!err) {
-  //     console.log("订阅成功:Switch")
-  //   }
-  // })
-  // client.on('message', function (topic, message, packet) {
-  //   console.log(packet.payload.toString())
-  // })
-}
-
-function changeHue(event) {
-  let h = event.detail.value;
-  PixelColors[0] = h;
-  this.setData({
-    colorRes: `rgb(${hsv2rgb(h, 1 ,1)})`
-  })
 }
 
 Page({
   data: {
     colorRes: "red"
   },
+  changeHue: changeHue,
+  onLoad: onLoad,
+  preventDefault: ()=>{},
   pulserTouchStart: pulserTouchStart,
   pulserTouchMove: pulserTouchMove,
   pulserTouchEnd: pulserTouchEnd,
   pulserTouchCancel: pulserTouchCancel,
-  changeHue: changeHue,
-  preventDefault: ()=>{},
-  onLoad: onLoad
 })

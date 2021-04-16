@@ -1,4 +1,4 @@
-import md5 from "../../utils/MD5.js"
+import md5 from "../../utils/md5.js"
 
 Page({
   users: [
