@@ -14,7 +14,7 @@ class Heart {
       canvasHeight: null,
       ctx: null,
       fragmentation: 20,
-      publishHandler: null,
+      mqtt: null,
     };
     this.setOptions(options);
     this.stream = "";
@@ -76,7 +76,7 @@ class Heart {
 
   streamEnd() {
     this.streamFrame = 0;
-    // this.options.publishHandler(this.stream);
+    this.options.mqtt.publish("PB/D/R", this.stream);
     console.log(this.stream);
     this.stream = "";
   }

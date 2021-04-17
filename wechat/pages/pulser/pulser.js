@@ -2,8 +2,8 @@ import Finger from "Finger";
 import Heart from "Heart";
 import PixelPositions from "PixelPositions";
 import {hsv2rgb} from "../../utils/util";
-// import * as mqtt from "../../utils/mqtt.min.4.1.10";
-var mqtt = require("../../utils/mqtt.min.4.1.10.js");
+// import * as MQTT from "../../utils/mqtt.min.4.1.10";
+var MQTT = require("../../utils/mqtt.min.4.1.10.js");
 
 const ctx = wx.createCanvasContext("heart");
 
@@ -21,17 +21,18 @@ const mqttOptions = {
   username: "thingidp@ajdnaud|PB_JS_1",
   password: "31926a99217eb5796fdd4794d684b0dc"
 };
+const mqtt = MQTT.connect('wxs://ajdnaud.iot.gz.baidubce.com/mqtt', mqttOptions)
 
 const heartOptions = {
   canvasWidth: CanvasWidth,
   canvasHeight: CanvasHeight,
   ctx: ctx,
   fragmentation: HeartFragmentation,
-  publishHandler: undefined,
+  mqtt: mqtt,
 };
+const heart = new Heart(PixelPositions, PixelRadius, heartOptions);
 
 const finger = new Finger(PixelPositions, FingerRadius);
-const heart = new Heart(PixelPositions, PixelRadius, heartOptions);
 
 function animate() {
   finger.update(heart.pixels, PixelColors);
@@ -65,19 +66,18 @@ function heartTouchCancel(event) {
 
 function onLoad() {
   wx.hideHomeButton();
-  var client = mqtt.connect('wxs://ajdnaud.iot.gz.baidubce.com/mqtt', mqttOptions)
-  client.on('connect', (e) => {
+  mqtt.on('connect', (e) => {
     console.log('成功连接服务器!')
     this.setData({
       ok:"Connected"
     })
   })
-  client.subscribe('Switch', (err) => {
+  mqtt.subscribe('PB/U/R', (err) => {
     if (!err) {
-      console.log("订阅成功:Switch")
+      console.log("订阅成功: PB/U/R")
     }
   })
-  client.on('message', function (topic, message, packet) {
+  mqtt.on('message', function (topic, message, packet) {
     console.log(packet.payload.toString())
   })
   setInterval(animate, 17);
