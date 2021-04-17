@@ -1,7 +1,7 @@
 import Pixel from "Pixel";
 import Cursor from "Cursor";
 import PixelPos from "PixelPos";
-import {hsv2rgb} from "../../utils/util"
+import {hsv2rgb, btobit} from "../../utils/util"
 // import * as mqtt from "../../utils/mqtt.min.4.1.10"
 var mqtt = require("../../utils/mqtt.min.4.1.10.js")
 
@@ -33,23 +33,6 @@ function animate() {
   runPixels();
   drawPixels(ctx);
   publishPixels();
-}
-
-function btobit(bitString) {
-  let bits = [];
-  for (let j = 0; j < Math.ceil(bitString.length / 8); ++j) {
-    let bit = "";
-    for (let i = 0; i < 8; ++i) {
-      let ij = 8 * j + i;
-      if (ij < bitString.length) {
-        bit += bitString[ij]
-      } else {
-        bit += '0'
-      }
-    }
-    bits.push(parseInt(bit,2));
-  }
-  return btoa(String.fromCharCode(...bits))
 }
 
 function changeHue(event) {
@@ -84,24 +67,8 @@ function flowStart() {
 }
 
 function flowWriteN(argN) {
-  let arg = [];
-  for (let j = 0; j < Math.ceil(pixels.length / 8); ++j) {
-    arg.push("");
-    for (let i = 0; i < 8; ++i) {
-      let ij = 8 * j + i;
-      if (ij < argN.length) {
-        arg[j] += argN[ij]
-      } else {
-        arg[j] += '0'
-      }
-    }
-    // btoa(String.fromCharCode(255,255,255))
-  }
-  for (let i in pixels) {
-    Math.floor(i / 8);
-  }
-  argN.slice(0, 8);
-  flowStream += `&N${argN};`;
+  let baseN = btobit(argN);
+  flowStream += `&N${baseN};`;
   ++flowFrame;
 }
 
@@ -109,7 +76,6 @@ function flowEnd() {
   flowFrame = 0;
   // mqttPub(flowStream);
   console.log(flowStream);
-
 }
 
 function onLoad() {

@@ -28,18 +28,20 @@ export function hsl2rgba(h, s, l) {
 export function btobit(bitString) {
   let asciis = [];
   for (let j = 0; j < Math.ceil(bitString.length / 8); ++j) {
-    let bitString = "";
+    let bit = "";
     for (let i = 0; i < 8; ++i) {
       let ij = 8 * j + i;
       if (ij < bitString.length) {
-        bitString += bitString[ij];
+        bit += bitString[ij];
       } else {
-        bitString += '0';
+        bit += '0';
       }
     }
-    asciis.push(parseInt(bitString, 2));
+    asciis.push(parseInt(bit, 2));
   }
-  return btoa(String.fromCharCode(...asciis));
+  // let baseString = btoa(String.fromCharCode(...asciis));
+  let baseString = wx.arrayBufferToBase64(asciis);
+  return baseString;
 }
 
 export function bittob(baseString) {

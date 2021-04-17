@@ -1,4 +1,4 @@
-import {hsv2rgb, hsl2rgba} from "../../utils/Color"
+import {hsv2rgb, hsl2rgba} from "../../utils/util"
 
 const TWOPI = Math.PI * 2;
 
@@ -9,14 +9,6 @@ class Pixel {
     this.r = r;
     this.active = false;
   }
-  run(colors) {
-    this.active = true;
-    this.h = colors[0];
-    this.s = colors[1];
-    this.l = colors[2];
-    this.a = colors[3];
-    this.deltaL = this.l / colors[4];
-  }
 
   draw(ctx) {
     ctx.fillStyle = "WhiteSmoke";
@@ -25,7 +17,6 @@ class Pixel {
     ctx.closePath();
     ctx.fill();
     if (this.active) {
-      // ctx.fillStyle = `rgba(${hsl2rgba(this.h, this.s, this.l)})`;
       let ga = 0;
       let gb = 1;
       if (this.l > 0.4) {
@@ -38,11 +29,21 @@ class Pixel {
       grd.addColorStop(ga, `rgba(${hsv2rgb(this.h, this.s, 1)}, ${gb})`)
       grd.addColorStop(1, `rgba(${hsv2rgb(this.h, this.s, 1)}, 0)`)
       ctx.fillStyle = grd;
+      // ctx.fillStyle = `rgba(${hsl2rgba(this.h, this.s, this.l)})`;
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.r, 0, TWOPI);
       ctx.closePath();
       ctx.fill();
     }
+  }
+  
+  run(colors) {
+    this.active = true;
+    this.h = colors[0];
+    this.s = colors[1];
+    this.l = colors[2];
+    this.a = colors[3];
+    this.deltaL = this.l / colors[4];
   }
 
   updata() {

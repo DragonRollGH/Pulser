@@ -28,6 +28,14 @@ const char *Name = "Roll_v1.0.04152033";
 // const char *MQTTSub2 = "";
 // const char *MQTTPub = "";
 
+const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";        //gitignore
+const int MQTTPort = 1883;                                     //gitignore
+const char *MQTTUsername = "thingidp@ajdnaud|PB_ESP_1";        //gitignore
+const char *MQTTPassword = "686a497bfb31349040277f697b692f62"; //gitignore
+const char *MQTTClientid = "PB_ESP_1";                         //gitignore
+const char *MQTTSub1 = "PB/D/R";                               //gitignore
+const char *MQTTSub2 = "PB/D/MR";                              //gitignore
+const char *MQTTPub = "PB/U/R";                                //gitignore
 
 //define in FS
 byte H = 0;
