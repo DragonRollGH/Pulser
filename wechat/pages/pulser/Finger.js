@@ -4,6 +4,7 @@ class Finger {
   constructor(pixelPositions, radius) {
     this.pixelPositions = pixelPositions;
     this.radius = radius;
+    this.cursors = [];
     // this.cursors.push(new Cursor()) //for pc's mouse
   }
 
@@ -17,7 +18,7 @@ class Finger {
 
   touchStart(changedTouches) {
     for (let i in changedTouches) {
-      let cursor = new Cursor(this.radius);
+      let cursor = new Cursor(this.pixelPositions, this.radius);
       cursor.copy(changedTouches[i]);
       this.cursors.push(cursor);
     }
@@ -39,8 +40,10 @@ class Finger {
 
   update(pixels, pixelColors) {
     for (let i in this.cursors) {
-      this.cursors[i].updata()
-      this.cursors[i].runPixels(pixels, pixelColors)
+      this.cursors[i].updata();
+      this.cursors[i].runPixels(pixels, pixelColors);
     }
   }
 }
+
+export default Finger;

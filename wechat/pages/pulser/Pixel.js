@@ -1,4 +1,4 @@
-import {hsv2rgb, hsl2rgba} from "../../utils/util"
+import {hsv2rgb, hsl2rgba} from "../../utils/util";
 
 const TWOPI = Math.PI * 2;
 
@@ -25,9 +25,9 @@ class Pixel {
       if (this.l < 0.4) {
         gb = this.l/0.4;
       }
-      let grd = ctx.createCircularGradient(this.x, this.y, this.r)
-      grd.addColorStop(ga, `rgba(${hsv2rgb(this.h, this.s, 1)}, ${gb})`)
-      grd.addColorStop(1, `rgba(${hsv2rgb(this.h, this.s, 1)}, 0)`)
+      let grd = ctx.createCircularGradient(this.x, this.y, this.r);
+      grd.addColorStop(ga, `rgba(${hsv2rgb(this.h, this.s, 1)}, ${gb})`);
+      grd.addColorStop(1, `rgba(${hsv2rgb(this.h, this.s, 1)}, 0)`);
       ctx.fillStyle = grd;
       // ctx.fillStyle = `rgba(${hsl2rgba(this.h, this.s, this.l)})`;
       ctx.beginPath();
@@ -36,7 +36,7 @@ class Pixel {
       ctx.fill();
     }
   }
-  
+
   run(colors) {
     this.active = true;
     this.h = colors[0];

@@ -1,4 +1,4 @@
-const PixelPos = [
+const PixelPositions = [
   [375.00, 226.65],
   [315.39, 168.29],
   [238.63, 139.03],
@@ -21,4 +21,4 @@ const PixelPos = [
   [434.61, 168.29]
 ];
 
-export default PixelPos;
+export default PixelPositions;

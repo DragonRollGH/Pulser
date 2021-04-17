@@ -10,11 +10,11 @@ class Heart {
       this.pixels.push(new Pixel(Positions[i][0], Positions[i][1], Radius));
     }
     this.options = {
-      canvasWidth: undefined,
-      canvasHeight: undefined,
-      ctx: undefined,
+      canvasWidth: null,
+      canvasHeight: null,
+      ctx: null,
       fragmentation: 20,
-      publishHandler: undefined,
+      publishHandler: null,
     };
     this.setOptions(options);
     this.stream = "";
@@ -32,7 +32,7 @@ class Heart {
   }
 
   publish() {
-    let argN = ""
+    let argN = "";
     let anyActive = 0;
     for (let i in this.pixels) {
       if (this.pixels[i].active) {
@@ -56,16 +56,16 @@ class Heart {
   }
 
   setOptions(options) {
-    for (k in options) {
+    for (let k in options) {
       if (typeof this.options[k] !== 'undefined') {
-        this.options[k] = options[k]
+        this.options[k] = options[k];
       }
     }
   }
 
   streamStart() {
     this.streamFrame = 1;
-    this.stream = ":H"
+    this.stream = ":H";
   }
 
   streamWriteN(argN) {
@@ -81,7 +81,7 @@ class Heart {
     this.stream = "";
   }
 
-  updata() {
+  update() {
     this.draw();
     this.publish();
   }

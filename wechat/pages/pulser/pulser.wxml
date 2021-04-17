@@ -2,11 +2,11 @@
   <view class="center">
     <canvas style="width: 750rpx; height: 750rpx;"
       disable-scroll="true"
-      canvas-id="Canvas"
-      bindtouchstart="pulserTouchStart"
-      bindtouchmove="pulserTouchMove"
-      bindtouchend="pulserTouchEnd"
-      bindtouchcancel="pulserTouchCancel"></canvas>
+      canvas-id="heart"
+      bindtouchstart="heartTouchStart"
+      bindtouchmove="heartTouchMove"
+      bindtouchend="heartTouchEnd"
+      bindtouchcancel="heartTouchCancel"></canvas>
   </view>
 
   <view class="center">
