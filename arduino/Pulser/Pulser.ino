@@ -17,7 +17,7 @@ const byte PixelLen = 20;
 const byte FrameRate = 17; // =1000ms/60fps
 const byte PinTouch = 12;
 const char *AP_SSID = "Rolls_Pulser";
-const char *Name = "Roll_v1.0.04171427";
+const char *Name = "Roll_v1.0.04171441";
 
 // const char *MQTTServer = "";
 // const int   MQTTPort = 1883;
