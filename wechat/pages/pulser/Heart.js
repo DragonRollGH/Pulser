@@ -1,13 +1,13 @@
 import Pixel from "Pixel";
-import {btobit} from "../../utils/util"
+import {btobit} from "../../utils/util";
 
 const DPR = 1 / getApp().globalData.dpr;
 
 class Heart {
-  constructor(Positons, Radius, options) {
+  constructor(Positions, Radius, options) {
     this.pixels = [];
-    for (let i = 0; i < Positons.length; i++) {
-      this.pixels.push(new Pixel(Positons[i][0], Positons[i][1], Radius));
+    for (let i = 0; i < Positions.length; i++) {
+      this.pixels.push(new Pixel(Positions[i][0], Positions[i][1], Radius));
     }
     this.options = {
       canvasWidth: undefined,
@@ -32,7 +32,7 @@ class Heart {
   }
 
   publish() {
-    let argN = "";
+    let argN = ""
     let anyActive = 0;
     for (let i in this.pixels) {
       if (this.pixels[i].active) {
@@ -85,5 +85,6 @@ class Heart {
     this.draw();
     this.publish();
   }
-
 }
+
+export default Heart;
