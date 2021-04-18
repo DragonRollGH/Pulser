@@ -56,8 +56,8 @@ class Heart {
   }
 
   setOptions(options) {
-    for (let k in options) {
-      if (typeof this.options[k] !== 'undefined') {
+    for (let k in this.options) {
+      if (typeof options[k] !== 'undefined') {
         this.options[k] = options[k];
       }
     }
@@ -76,8 +76,10 @@ class Heart {
 
   streamEnd() {
     this.streamFrame = 0;
-    this.options.mqtt.publish("PB/D/R", this.stream);
-    console.log(this.stream);
+    if (this.options.mqtt) {
+      this.options.mqtt.publish("PB/D/R", this.stream);
+      console.log(this.stream);
+    }
     this.stream = "";
   }
 

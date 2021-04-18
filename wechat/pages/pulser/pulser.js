@@ -2,8 +2,7 @@ import Finger from "Finger";
 import Heart from "Heart";
 import PixelPositions from "PixelPositions";
 import {hsv2rgb} from "../../utils/util";
-// import * as MQTT from "../../utils/mqtt.min.4.1.10";
-var MQTT = require("../../utils/mqtt.min.4.1.10.js");
+import * as MQTT from "../../utils/mqtt.min.4.1.10";
 
 const ctx = wx.createCanvasContext("heart");
 
@@ -14,21 +13,20 @@ const HeartFragmentation = 30;
 const PixelColors = [0, 0.8, 0.9, 5, 35];
 const PixelRadius = 30;
 
+const MqttUrl = "wxs://ajdnaud.iot.gz.baidubce.com/mqtt";
 const mqttOptions = {
-  connectTimeout: 4000,  //超时时间
-  clientId: 'wx_' + parseInt(Math.random() * 100 + 800, 10),
-  // port: 443,
+  connectTimeout: 5000,  //超时时间
+  clientId: 'wx_' + new Date().getMilliseconds(),
   username: "thingidp@ajdnaud|PB_JS_1",
   password: "31926a99217eb5796fdd4794d684b0dc"
 };
-const mqtt = MQTT.connect('wxs://ajdnaud.iot.gz.baidubce.com/mqtt', mqttOptions)
+var mqtt = null;
 
 const heartOptions = {
   canvasWidth: CanvasWidth,
   canvasHeight: CanvasHeight,
   ctx: ctx,
   fragmentation: HeartFragmentation,
-  mqtt: mqtt,
 };
 const heart = new Heart(PixelPositions, PixelRadius, heartOptions);
 
@@ -64,24 +62,38 @@ function heartTouchCancel(event) {
   finger.touchEnd(event.changedTouches);
 }
 
+function mqttConnect() {
+  mqttOptions.clientId = 'wx_' + new Date().getMilliseconds();
+  mqtt = MQTT.connect(MqttUrl, mqttOptions);
+  heart.setOptions({mqtt: mqtt});
+  mqttSubscribe();
+}
+
+function mqttSubscribe() {
+  mqtt.on('connect', (e) => {console.log('成功连接服务器!');})
+  mqtt.subscribe('PB/U/R', (err) => {if (!err) {console.log("订阅成功: PB/U/R");}})
+  mqtt.on('message', function (topic, message, packet) {console.log(packet.payload.toString());})
+}
+
+function onHide() {
+  mqtt.end();
+  console.log('mqtt.end();');
+}
+
 function onLoad() {
   wx.hideHomeButton();
-  mqtt.on('connect', (e) => {
-    console.log('成功连接服务器!')
-    this.setData({
-      ok:"Connected"
-    })
-  })
-  mqtt.subscribe('PB/U/R', (err) => {
-    if (!err) {
-      console.log("订阅成功: PB/U/R")
-    }
-  })
-  mqtt.on('message', function (topic, message, packet) {
-    console.log(packet.payload.toString())
-  })
   setInterval(animate, 17);
   animate();
+}
+
+
+function onPullDownRefresh() {
+  onHide();
+  onShow();
+}
+
+function onShow() {
+  mqttConnect();
 }
 
 
@@ -94,6 +106,9 @@ Page({
   heartTouchMove: heartTouchMove,
   heartTouchEnd: heartTouchEnd,
   heartTouchCancel: heartTouchCancel,
+  onHide: onHide,
   onLoad: onLoad,
+  onPullDownRefresh: onPullDownRefresh,
+  onShow: onShow,
   preventDefault: () => {},
 });

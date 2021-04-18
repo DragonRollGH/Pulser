@@ -19,8 +19,8 @@
       value="{{hsv.h}}"
       block-color="{{colorRes}}"/>
   </view>
+</view>
 
   <view class="center">
     <image style="width: 300rpx; height: 300rpx;" src="../../img/avatar.jpg" mode="aspectFit"></image>
   </view>
-</view>
