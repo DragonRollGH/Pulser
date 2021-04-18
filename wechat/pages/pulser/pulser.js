@@ -56,9 +56,14 @@ function heartTouchCancel(event) {
 
 function hueChange(event) {
   let h = event.detail.value;
-  h *= 255 / 359;
-  toString()
-  mqtt.publish("PB/D/R", toString(h, 16))
+  PixelColors[0] = h;
+  this.setData({
+    hueBlock: `rgb(${hsv2rgb(h, 1 ,1)})`
+  })
+  h = Math.round(h * 255 / 359);
+  console.log(`h: ${h}`);
+  h = ("0" + h.toString(16)).substr(-2);
+  mqtt.publish("PB/D/R", ":H&H" + h);
 }
 
 function hueChanging(event) {
@@ -67,6 +72,13 @@ function hueChanging(event) {
   this.setData({
     hueBlock: `rgb(${hsv2rgb(h, 1 ,1)})`
   })
+}
+
+function lightnessChange(event) {
+  let l = event.detail.value;
+  console.log(`l: ${l}`);
+  l = ("0" + l.toString(16)).substr(-2);
+  mqtt.publish("PB/D/R", ":H&L" + l);
 }
 
 function mqttConnect() {
@@ -114,6 +126,7 @@ Page({
   heartTouchCancel: heartTouchCancel,
   hueChange: hueChange,
   hueChanging: hueChanging,
+  lightnessChange: lightnessChange,
   onHide: onHide,
   onLoad: onLoad,
   onPullDownRefresh: onPullDownRefresh,

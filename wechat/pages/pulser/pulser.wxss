@@ -9,3 +9,8 @@
   width: 600rpx;
   margin: 40rpx auto;
 }
+
+.lightnessSlider {
+  width: 600rpx;
+  margin: 40rpx auto;
+}

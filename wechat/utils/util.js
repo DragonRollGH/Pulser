@@ -26,11 +26,18 @@ export function hsl2rgba(h, s, l) {
 }
 
 export function btobit(bitString) {
-  let I = parseInt(bitString, 2);
   let a = [];
-  while(I) {
-    a.push(I % 256);
-    I = Math.floor(I / 256);
+  for (let j = 0; j < Math.ceil(bitString.length / 8); ++j) {
+    let b = "";
+    for (let i = 0; i < 8; ++i) {
+      let ij = 8 * j + i;
+      if (ij < bitString.length) {
+        b += bitString[ij];
+      } else {
+        b += '0';
+      }
+    }
+    a.push(parseInt(b, 2));
   }
   // return btoa(String.fromCharCode(...a));
   return wx.arrayBufferToBase64(a);

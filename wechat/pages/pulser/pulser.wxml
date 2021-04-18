@@ -10,7 +10,7 @@
   </view>
 
   <view class="center">
-    <slider bindchanging="hueChanging""
+    <slider bindchanging="hueChanging"
       bindchange="hueChange"
       activeColor="transparent"
       backgroundColor="transparent"
@@ -18,6 +18,14 @@
       max="359"
       value="{{hue}}"
       block-color="{{hueBlock}}"/>
+  </view>
+
+  <view class="center">
+    <slider bindchange="lightnessChange"
+      class="lightnessSlider"
+      max="127"
+      value="{{lightness}}"
+      block-color="WhiteSmoke"/>
   </view>
 </view>
 
