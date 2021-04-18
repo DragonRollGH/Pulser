@@ -12,10 +12,11 @@
   <view class="center">
     <slider bindchanging="hueChanging"
       bindchange="hueChange"
+      bindlongpress="huePress"
       activeColor="transparent"
       backgroundColor="transparent"
       class="hueSlider"
-      max="359"
+      max="255"
       value="{{hue}}"
       block-color="{{hueBlock}}"/>
   </view>
@@ -23,12 +24,15 @@
   <view class="center">
     <slider bindchange="lightnessChange"
       class="lightnessSlider"
-      max="127"
+      min="5"
+      max="50"
       value="{{lightness}}"
       block-color="WhiteSmoke"/>
   </view>
 </view>
 
   <view class="center">
-    <image style="width: 300rpx; height: 300rpx;" src="../../img/avatar.jpg" mode="aspectFit"></image>
+    <image style="width: 300rpx; height: 300rpx;" 
+    src="../../img/avatar.jpg" 
+    mode="aspectFit"></image>
   </view>

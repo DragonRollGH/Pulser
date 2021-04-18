@@ -18,7 +18,8 @@ class Heart {
     };
     this.setOptions(options);
     this.cursoredIds = [];
-    this.colors = []
+    this.colors = {};
+    this.oldColors = {};
     this.stream = "";
     this.streamFrame = 0;
   }
@@ -51,7 +52,7 @@ class Heart {
     if (this.streamFrame == this.options.fragmentation) {
       this.streamEnd();
     } else if (this.streamFrame) {
-      this.streamWriteN(argN);
+      this.streamWrite(argN);
     }
   }
 
@@ -74,6 +75,18 @@ class Heart {
     this.stream = ":H";
   }
 
+  streamWrite(argN) {
+    for (let k in this.colors) {
+      if (this.colors[k] !== this.oldColors[k]) {
+        let c = ("0" + this.colors[k].toString(16)).substr(-2);
+        this.stream += `&${k}${c}`;
+        this.oldColors[k] = this.colors[k];
+        // console.log(`&${k}${c}`);
+      }
+    }
+    this.streamWriteN(argN);
+  }
+
   streamWriteN(argN) {
     let baseN = btobit(argN);
     this.stream += `&N${baseN};`;
@@ -86,7 +99,7 @@ class Heart {
       this.options.mqtt.publish("PB/D/R", this.stream);
       console.log(this.stream);
     }
-    this.stream = "";
+    this.stream = ":H";
   }
 
   update(cursoredIds, pixelColors) {
