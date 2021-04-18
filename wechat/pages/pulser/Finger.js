@@ -6,6 +6,7 @@ class Finger {
     this.radius = radius;
     this.cursors = [];
     // this.cursors.push(new Cursor()) //for pc's mouse
+    this.cursoredIds = [];
   }
 
   find(identifier) {
@@ -38,10 +39,11 @@ class Finger {
     }
   }
 
-  update(pixels, pixelColors) {
+  update() {
+    this.cursoredIds = [];
     for (let i in this.cursors) {
       this.cursors[i].updata();
-      this.cursors[i].runPixels(pixels, pixelColors);
+      this.cursoredIds.push(...this.cursors[i].extendCursoredIds);
     }
   }
 }

@@ -17,7 +17,7 @@ const byte PixelLen = 20;
 const byte FrameRate = 17; // =1000ms/60fps
 const byte PinTouch = 12;
 const char *AP_SSID = "Rolls_Pulser";
-const char *Name = "Roll_v1.0.04172156";
+const char *Name = "Roll_v1.0.04181608";
 
 // const char *MQTTServer = "";
 // const int   MQTTPort = 1883;
@@ -391,8 +391,8 @@ void setPixelsColor(void)
     {
         if (pixels[i].active)
         {
-            // heart.SetPixelColor(i, HslColor(0, pixels[i].S, pixels[i].L));
-            heart.SetPixelColor(i, RgbColor(10, 0, 0));
+            heart.SetPixelColor(i, HslColor(pixels[i].H, pixels[i].S, pixels[i].L));
+            // heart.SetPixelColor(i, RgbColor(10, 0, 0));
             anyActive = 1;
         }
         else
@@ -455,14 +455,14 @@ void runFlow(void)
     flowFrame = 1;
     flowStart = millis();
     sleep = sleepRun;
-    // heart.Begin();
+    heart.Begin();
 }
 
 void stopFlow(void)
 {
     flowStart = 0;
     sleep = sleepIdle;
-    // pinMode(3, INPUT);
+    pinMode(3, INPUT);
 }
 
 // //向MPU6050写入一个字节的数据
@@ -523,7 +523,7 @@ void setup()
 {
     // Serial.begin(115200);
     stream.write("&L05&N////;");
-    heart.Begin();
+    // heart.Begin();
     runFlow();
     setPixelsColor();
 

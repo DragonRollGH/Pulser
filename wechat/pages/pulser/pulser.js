@@ -33,8 +33,8 @@ const heart = new Heart(PixelPositions, PixelRadius, heartOptions);
 const finger = new Finger(PixelPositions, FingerRadius);
 
 function animate() {
-  finger.update(heart.pixels, PixelColors);
-  heart.update();
+  finger.update();
+  heart.update(finger.cursoredIds, PixelColors);
 }
 
 function changeHue(event) {

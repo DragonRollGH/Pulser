@@ -1,5 +1,5 @@
 import Pixel from "Pixel";
-import {btobit} from "../../utils/util";
+import { btobit } from "../../utils/util";
 
 const DPR = 1 / getApp().globalData.dpr;
 
@@ -17,6 +17,8 @@ class Heart {
       mqtt: null,
     };
     this.setOptions(options);
+    this.cursoredIds = [];
+    this.colors = []
     this.stream = "";
     this.streamFrame = 0;
   }
@@ -33,25 +35,29 @@ class Heart {
 
   publish() {
     let argN = "";
-    let anyActive = 0;
+    let anyCursored = 0;
     for (let i in this.pixels) {
-      if (this.pixels[i].active) {
-        anyActive = 1;
-        argN += '1';
+      if (this.cursoredIds.includes(Number(i))) {
+        anyCursored = 1;
+        argN += "1";
       } else {
-        argN += '0';
+        argN += "0";
       }
     }
-    if (anyActive) {
-      if (!this.streamFrame) {
-        this.streamStart();
-      }
+
+    if (anyCursored && !this.streamFrame) {
+      this.streamStart();
+    }
+    if (this.streamFrame == this.options.fragmentation) {
+      this.streamEnd();
+    } else if (this.streamFrame) {
       this.streamWriteN(argN);
     }
-    if (!anyActive || this.streamFrame == this.options.fragmentation) {
-      if (this.streamFrame) {
-        this.streamEnd();
-      }
+  }
+
+  run() {
+    for (let i in this.cursoredIds) {
+      this.pixels[this.cursoredIds[i]].run(this.colors);
     }
   }
 
@@ -83,7 +89,10 @@ class Heart {
     this.stream = "";
   }
 
-  update() {
+  update(cursoredIds, pixelColors) {
+    this.cursoredIds = cursoredIds;
+    this.colors = pixelColors;
+    this.run();
     this.draw();
     this.publish();
   }
