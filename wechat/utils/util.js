@@ -20,35 +20,27 @@ export function hsv2rgb(h, s, v) {
 }
 
 export function hsl2rgba(h, s, l) {
-    let rgb = hsv2rgb(h, s, 1);
-    rgb.push(l);
-    return rgb;
+    let rgba = hsv2rgb(h, s, 1);
+    rgba.push(l);
+    return rgba;
 }
 
 export function btobit(bitString) {
-  let asciis = [];
-  for (let j = 0; j < Math.ceil(bitString.length / 8); ++j) {
-    let bit = "";
-    for (let i = 0; i < 8; ++i) {
-      let ij = 8 * j + i;
-      if (ij < bitString.length) {
-        bit += bitString[ij];
-      } else {
-        bit += '0';
-      }
-    }
-    asciis.push(parseInt(bit, 2));
+  let I = parseInt(bitString, 2);
+  let a = [];
+  while(I) {
+    a.push(I % 256);
+    I = Math.floor(I / 256);
   }
-  // let baseString = btoa(String.fromCharCode(...asciis));
-  let baseString = wx.arrayBufferToBase64(asciis);
-  return baseString;
+  // return btoa(String.fromCharCode(...a));
+  return wx.arrayBufferToBase64(a);
 }
 
 export function bittob(baseString) {
-  let asciiString = atob(baseString);
-  let bitString = "";
-  for (let i = 0; i < asciiString.length; ++i) {
-    bitString += asciiString.charCodeAt(i).toString(2);
+  let a = atob(baseString);
+  let b = "";
+  for (let i = 0; i < a.length; ++i) {
+    b += a.charCodeAt(i).toString(2);
   }
-  return bitString;
+  return b;
 }

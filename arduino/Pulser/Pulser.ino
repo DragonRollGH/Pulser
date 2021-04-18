@@ -75,7 +75,6 @@ OneButton button(PinTouch, false, false);
 // MenuSystem menu[6];
 // byte menuCurrent = 0;
 
-
 // void menuHome()
 // {
 //     Serial.println("Home");
@@ -150,7 +149,6 @@ ICACHE_RAM_ATTR void checkTicks()
 //     menu[menuCurrent].callback();
 // }
 
-
 class Pixel
 {
 public:
@@ -213,7 +211,7 @@ public:
 
     void write(String w)
     {
-        for(int i = 0; i < w.length(); ++i)
+        for (int i = 0; i < w.length(); ++i)
         {
             write(w[i]);
         }
@@ -355,19 +353,19 @@ void setPixelsColor(void)
                 useDefault();
                 break;
             case 'H':
-                H = toByte(stream.read(), stream.read());
+                H = parseHex(stream.read(), stream.read());
                 break;
             case 'S':
-                S = toByte(stream.read(), stream.read());
+                S = parseHex(stream.read(), stream.read());
                 break;
             case 'L':
-                L = toByte(stream.read(), stream.read());
+                L = parseHex(stream.read(), stream.read());
                 break;
             case 'A':
-                A = toByte(stream.read(), stream.read());
+                A = parseHex(stream.read(), stream.read());
                 break;
             case 'B':
-                B = toByte(stream.read(), stream.read());
+                B = parseHex(stream.read(), stream.read());
                 break;
             case 'C':
                 setHSL(stream.read(), stream.read(), stream.read(), stream.read());
@@ -410,27 +408,20 @@ void setPixelsColor(void)
 
 void useDefault(void) {}
 
-byte toByte(byte H, byte L)
+byte parseHex(byte L)
 {
-    byte bH, bL, b;
-    if (H > '9')
-    {
-        bH = (H - 'a' + 10) * 16;
-    }
-    else
-    {
-        bH = (H - '0') * 16;
-    }
-    if (L > '9')
-    {
-        bL = L - 'a' + 10;
-    }
-    else
-    {
-        bL = L - '0';
-    }
-    b = bH + bL;
-    return b;
+    if ((L >= '0') && (L <= '9'))
+        return L - '0';
+    if ((L >= 'A') && (L <= 'F'))
+        return L + 10 - 'A';
+    if ((L >= 'a') && (L <= 'a'))
+        return L + 10 - 'a';
+    return -1;
+}
+
+byte parseHex(byte H, byte L)
+{
+    return parseHex(H) * 16 + nibble2c(L);
 }
 
 void setHSL(byte b1, byte b2, byte b3, byte b4) {}
@@ -545,11 +536,11 @@ void setup()
     // MenuSystem m5({ 0, 0, 2, 3, 4 }, menuSubmenu);  //5
     // menu = {m0,m1,m2,m3,m4,m5};
     attachInterrupt(digitalPinToInterrupt(PinTouch), checkTicks, CHANGE);
-    button.attachClick([]() {stream.write("&NgAAA;");});
-    button.attachDoubleClick([]() {stream.write("&NwAAA;");});
-    button.attachMultiClick([]() {stream.write("&N4AAA;");});
-    button.attachLongPressStart([]() {stream.write("&N8AAA;");});
-    button.attachLongPressStop([]() {stream.write("&N+AAA;");});
+    button.attachClick([]() { stream.write("&NgAAA;"); });
+    button.attachDoubleClick([]() { stream.write("&NwAAA;"); });
+    button.attachMultiClick([]() { stream.write("&N4AAA;"); });
+    button.attachLongPressStart([]() { stream.write("&N8AAA;"); });
+    button.attachLongPressStop([]() { stream.write("&N+AAA;"); });
 
     stream.write("&N////;");
     // Serial.println("\nESP OK");

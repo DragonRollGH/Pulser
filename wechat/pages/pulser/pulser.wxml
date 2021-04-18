@@ -10,14 +10,14 @@
   </view>
 
   <view class="center">
-    <slider bindchanging="changeHue"
-      bindchange="changeHue"
+    <slider bindchanging="hueChanging""
+      bindchange="hueChange"
       activeColor="transparent"
       backgroundColor="transparent"
-      class="ribbon"
+      class="hueSlider"
       max="359"
-      value="{{hsv.h}}"
-      block-color="{{colorRes}}"/>
+      value="{{hue}}"
+      block-color="{{hueBlock}}"/>
   </view>
 </view>
 

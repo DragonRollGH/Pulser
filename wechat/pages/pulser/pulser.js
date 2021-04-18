@@ -37,14 +37,6 @@ function animate() {
   heart.update(finger.cursoredIds, PixelColors);
 }
 
-function changeHue(event) {
-  let h = event.detail.value;
-  PixelColors[0] = h;
-  this.setData({
-    colorRes: `rgb(${hsv2rgb(h, 1 ,1)})`
-  })
-}
-
 function heartTouchStart(event) {
   // event.preventDefault();
   finger.touchStart(event.changedTouches);
@@ -60,6 +52,21 @@ function heartTouchEnd(event) {
 
 function heartTouchCancel(event) {
   finger.touchEnd(event.changedTouches);
+}
+
+function hueChange(event) {
+  let h = event.detail.value;
+  h *= 255 / 359;
+  toString()
+  mqtt.publish("PB/D/R", toString(h, 16))
+}
+
+function hueChanging(event) {
+  let h = event.detail.value;
+  PixelColors[0] = h;
+  this.setData({
+    hueBlock: `rgb(${hsv2rgb(h, 1 ,1)})`
+  })
 }
 
 function mqttConnect() {
@@ -99,13 +106,14 @@ function onShow() {
 
 Page({
   data: {
-    colorRes: "red"
+    hueBlock: "red"
   },
-  changeHue: changeHue,
   heartTouchStart: heartTouchStart,
   heartTouchMove: heartTouchMove,
   heartTouchEnd: heartTouchEnd,
   heartTouchCancel: heartTouchCancel,
+  hueChange: hueChange,
+  hueChanging: hueChanging,
   onHide: onHide,
   onLoad: onLoad,
   onPullDownRefresh: onPullDownRefresh,
