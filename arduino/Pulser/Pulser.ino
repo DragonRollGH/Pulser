@@ -10,6 +10,8 @@
 #include <WiFiManager.h>
 #include <Wire.h>
 
+#include "Pixel.cpp"
+
 // const int MPU = 0x68;  //MPU-6050的I2C地址
 // const int nValCnt = 4; //一次读取寄存器的数量
 
@@ -390,7 +392,6 @@ void setPixelsColor(void)
         if (pixels[i].active)
         {
             heart.SetPixelColor(i, HslColor(pixels[i].H, pixels[i].S, pixels[i].L));
-            // heart.SetPixelColor(i, RgbColor(10, 0, 0));
             anyActive = 1;
         }
         else
@@ -421,7 +422,7 @@ byte parseHex(byte L)
 
 byte parseHex(byte H, byte L)
 {
-    return parseHex(H) * 16 + nibble2c(L);
+    return parseHex(H) * 16 + parseHex(L);
 }
 
 void setHSL(byte b1, byte b2, byte b3, byte b4) {}
