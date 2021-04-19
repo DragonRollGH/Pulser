@@ -393,15 +393,15 @@ void heartClear(byte i)
 void MQTTConnect()
 {
     byte indicator = 0;
-    if (WiFi.status() != WL_CONNECTED)
-    {
-        WiFiConnect();
-    }
     for (byte i = 0; i < 120; ++i)
     {
         indicator = indicator ? 0 : 10;
         heart.SetPixelColor(1, RgbColor(indicator, 0, 0));
         heart.Show();
+        if (WiFi.status() != WL_CONNECTED)
+        {
+            WiFiConnect();
+        }
         if (MQTT.connect(MQTTClientid, MQTTUsername, MQTTPassword))
         {
             heartClear(1);
