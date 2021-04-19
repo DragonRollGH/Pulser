@@ -85,6 +85,7 @@ function hueChanging(event) {
 
 function huePress() {
   this.data.huePressed = !this.data.huePressed;
+  wx.vibrateShort({});
 }
 
 function hueRainbow() {
