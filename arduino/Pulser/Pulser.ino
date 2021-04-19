@@ -24,7 +24,7 @@ const byte PixelLen = 20;
 const byte FrameRate = 17; // =1000ms/60fps
 const byte PinTouch = 12;
 const char *AP_SSID = "Rolls_Pulser";
-const char *Name = "Roll_v1.0.04192016";
+const char *Name = "Roll_v1.0.04200019";
 
 // const char *MQTTServer = "";
 // const int   MQTTPort = 1883;
@@ -45,6 +45,11 @@ byte B = 35;
 byte sleepRun = 1;
 byte sleepIdle = 100; // > 300 is useless
 unsigned int flowCache = 1;
+byte indicatorLightness = 10;
+byte indicatorPin = 10;
+bool indicatorToggleFlag = 0;
+bool heartBeginFlag = 0;
+
 
 byte sleep = sleepIdle;
 unsigned int flowFrame;
@@ -373,9 +378,13 @@ void stopFlow(void)
     heartTicker.detach();
 }
 
-void heartTick()
+void heartBegin()
 {
-    setPixelsColor();
+    if (!heartBeginFlag)
+    {
+        heartBeginFlag = 1;
+        heart.Begin();
+    }
 }
 
 void heartClear()
@@ -390,21 +399,108 @@ void heartClear(byte i)
     heart.Show();
 }
 
+void heartEnd()
+{
+    pinMode(3, INPUT);
+}
+
+void heartIndicator(byte i, char s)
+{
+    // IndicatorBlink = !IndicatorBlink;
+    // heartIndicator(i, s, IndicatorBlink);
+}
+
+void heartIndicator(byte i, char s, bool b)
+{
+    RgbColor color;
+    if (b)
+    {
+        switch (s)
+        {
+        case 'r':
+            color = RgbColor(indicatorLightness, 0, 0);
+            break;
+        case 'g':
+            color = RgbColor(0, indicatorLightness, 0);
+            break;
+        case 'b':
+            color = RgbColor(0, 0, indicatorLightness);
+            break;
+        case 'k':
+            color = RgbColor(0, 0, 0);
+            break;
+        default:
+            color = RgbColor(0, 0, 0);
+            break;
+        }
+    }
+    else
+    {
+        color = RgbColor(0, 0, 0);
+    }
+    heart.SetPixelColor(i, color);
+    heart.Show();
+}
+
+void heartTick()
+{
+    setPixelsColor();
+}
+
+void indicatorClear()
+{
+    heartBegin();
+    heart.SetPixelColor(indicatorPin, RgbColor(0, 0, 0));
+    heart.Show();
+}
+
+void indicatorSet(char c)
+{
+    heartBegin();
+    RgbColor color;
+    switch (c)
+    {
+    case 'r':
+        color = RgbColor(indicatorLightness, 0, 0);
+        break;
+    case 'g':
+        color = RgbColor(0, indicatorLightness, 0);
+        break;
+    case 'b':
+        color = RgbColor(0, 0, indicatorLightness);
+        break;
+    default:
+        color = RgbColor(0, 0, 0);
+        break;
+    }
+    heart.SetPixelColor(indicatorPin, color);
+    heart.Show();
+}
+
+void indicatorToggle(char c)
+{
+    indicatorToggleFlag = !indicatorToggleFlag;
+    if (indicatorToggleFlag)
+    {
+        indicatorSet(c);
+    }
+    else
+    {
+        indicatorClear();
+    }
+}
+
 void MQTTConnect()
 {
-    byte indicator = 0;
     for (byte i = 0; i < 120; ++i)
     {
-        indicator = indicator ? 0 : 10;
-        heart.SetPixelColor(1, RgbColor(indicator, 0, 0));
-        heart.Show();
+        indicatorToggle('g');
         if (WiFi.status() != WL_CONNECTED)
         {
             WiFiConnect();
         }
         if (MQTT.connect(MQTTClientid, MQTTUsername, MQTTPassword))
         {
-            heartClear(1);
             break;
         }
         delay(500);
@@ -413,6 +509,7 @@ void MQTTConnect()
     delay(10);
     MQTT.subscribe(MQTTSub2);
     cmdACK();
+    heartClear();
 }
 
 void MQTTInitialize()
@@ -432,28 +529,23 @@ void MQTTLoop()
 
 int WiFiConnect()
 {
-    byte indicator = 0;
-    for (byte i = 0; i < 20; ++i)
+    //stopTicker!
+    for (byte i = 0; i < 30; ++i)
     {
-        indicator = indicator ? 0 : 10;
-        heart.SetPixelColor(0, RgbColor(indicator, 0, 0));
-        heart.Show();
+        indicatorToggle('r');
         if (STA.run() == WL_CONNECTED)
         {
-            heartClear(0);
             return 1;
         }
         delay(500);
     }
     if (WiFi.status() != WL_CONNECTED)
     {
-        heart.SetPixelColor(0, RgbColor(0, 0, 10));
-        heart.Show();
+        indicatorSet('b');
         WM.setConfigPortalTimeout(180);
         WM.startConfigPortal(AP_SSID);
         if (WiFi.status() == WL_CONNECTED)
         {
-            heartClear(0);
             return 1;
         }
         else
@@ -471,67 +563,11 @@ void WiFiInitialize()
     STA.addAP("DragonRoll", "1234567890");
 }
 
-// //向MPU6050写入一个字节的数据
-// //指定寄存器地址与一个字节的值
-// void WriteMPUReg(int nReg, unsigned char nVal)
-// {
-//     Wire.beginTransmission(MPU);
-//     Wire.write(nReg);
-//     Wire.write(nVal);
-//     Wire.endTransmission(true);
-// }
-
-// //从MPU6050读出加速度计三个分量、温度和三个角速度计
-// //保存在指定的数组中
-// void ReadAccGyr(int *pVals)
-// {
-//     Wire.beginTransmission(MPU);
-//     Wire.write(0x3B);
-//     Wire.requestFrom(MPU, nValCnt * 2, true);
-//     Wire.endTransmission(true);
-//     for (long i = 0; i < nValCnt; ++i)
-//     {
-//         pVals[i] = Wire.read() << 8 | Wire.read();
-//     }
-// }
-
-// //对读数进行纠正，消除偏移，并转换为物理量。公式见文档。
-// void Rectify(int *pReadout, float *pRealVals)
-// {
-//     for (int i = 0; i < 3; ++i)
-//     {
-//         pRealVals[i] = pReadout[i] / 16384.0f;
-//     }
-//     pRealVals[3] = pReadout[3] / 340.0f + 36.53;
-// }
-
-// void MPUloop(void)
-// {
-//     int readouts[nValCnt];
-//     ReadAccGyr(readouts); //读出测量值
-
-//     float realVals[4];
-//     Rectify(readouts, realVals); //根据校准的偏移量进行纠正
-
-//     Serial.print("aX: ");
-//     Serial.print(String(realVals[0]));
-//     Serial.print("| aY: ");
-//     Serial.print(String(realVals[1]));
-//     Serial.print("| aZ: ");
-//     Serial.print(String(realVals[2]));
-//     Serial.print("| Tp: ");
-//     Serial.print(String(realVals[3]));
-//     Serial.println();
-//     delay(10);
-// }
-
 void setup()
 {
     heart.Begin();
     WiFiInitialize();
-    WiFiConnect();
     MQTTInitialize();
-    MQTTConnect();
 
     attachInterrupt(digitalPinToInterrupt(PinTouch), checkTicks, CHANGE);
     button.attachClick([]() { stream.write("&NgAAA;"); });
