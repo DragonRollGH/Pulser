@@ -401,45 +401,11 @@ void heartClear(byte i)
 
 void heartEnd()
 {
+    if (heartBeginFlag)
+    {
+    heartBeginFlag = 0;
     pinMode(3, INPUT);
-}
-
-void heartIndicator(byte i, char s)
-{
-    // IndicatorBlink = !IndicatorBlink;
-    // heartIndicator(i, s, IndicatorBlink);
-}
-
-void heartIndicator(byte i, char s, bool b)
-{
-    RgbColor color;
-    if (b)
-    {
-        switch (s)
-        {
-        case 'r':
-            color = RgbColor(indicatorLightness, 0, 0);
-            break;
-        case 'g':
-            color = RgbColor(0, indicatorLightness, 0);
-            break;
-        case 'b':
-            color = RgbColor(0, 0, indicatorLightness);
-            break;
-        case 'k':
-            color = RgbColor(0, 0, 0);
-            break;
-        default:
-            color = RgbColor(0, 0, 0);
-            break;
-        }
     }
-    else
-    {
-        color = RgbColor(0, 0, 0);
-    }
-    heart.SetPixelColor(i, color);
-    heart.Show();
 }
 
 void heartTick()
