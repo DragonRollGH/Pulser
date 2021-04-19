@@ -66,103 +66,13 @@ Ticker heartTicker;
 DataStream stream;
 Pixel pixels[PixelLen];
 
-// class MenuSystem
-// {
-// public:
-//     byte tapType[5];
-//     void (*callback)();
-//     MenuSystem()
-//     {}
-//     MenuSystem(byte tT[], void (*cb)())
-//     {
-//         for (byte i = 0; i < 5; ++i)
-//         {
-//             tapType[i] = tT[i];
-//         }
-//         callback = cb;
-//     }
-// };
-// MenuSystem menu[6];
-// byte menuCurrent = 0;
-
-// void menuHome()
-// {
-//     Serial.println("Home");
-// }
-// void menuMain()
-// {
-//     Serial.println("Main");
-// }
-// void menuAck()
-// {
-//     Serial.println("Ack");
-// }
-// void menuBattery()
-// {
-//     Serial.println("Battery");
-// }
-// void menuPulse()
-// {
-//     Serial.println("Pulse");
-// }
-// void menuSubmenu()
-// {
-//     Serial.println("Submenu");
-// }
 ICACHE_RAM_ATTR void checkTicks()
 {
     button.tick();
 }
-// void pressStop()
-// {
-//     Serial.println("pressStop");
-// }
-// void singleClick()
-// {
-//     Serial.println("singleClick");
-// }
-// void doubleClick()
-// {
-//     Serial.println("doubleClick");
-// }
-// void multiClick()
-// {
-//     Serial.println("multiClick");
-// }
-// void pressStart()
-// {
-//     Serial.println("pressStart");
-// }
-// void pressStop()
-// {
-//     menuCurrent = menu[menuCurrent].tapType[0];
-//     menu[menuCurrent].callback();
-// }
-// void singleClick()
-// {
-//     menuCurrent = menu[menuCurrent].tapType[1];
-//     menu[menuCurrent].callback();
-// }
-// void doubleClick()
-// {
-//     menuCurrent = menu[menuCurrent].tapType[2];
-//     menu[menuCurrent].callback();
-// }
-// void multiClick()
-// {
-//     menuCurrent = menu[menuCurrent].tapType[3];
-//     menu[menuCurrent].callback();
-// }
-// void pressStart()
-// {
-//     menuCurrent = menu[menuCurrent].tapType[4];
-//     menu[menuCurrent].callback();
-// }
 
 void mqttMsg(String &topic, String &payload)
 {
-    // Serial.println("Message arrived [" + topic + "] " + payload);
-
     if (payload.length() > 1 && payload[0] == ':')
     {
         switch (payload[1])
@@ -389,12 +299,14 @@ void heartBegin()
 
 void heartClear()
 {
+    heartBegin();
     heart.ClearTo(RgbColor(0, 0, 0));
     heart.Show();
 }
 
 void heartClear(byte i)
 {
+    heartBegin();
     heart.SetPixelColor(i, RgbColor(0, 0, 0));
     heart.Show();
 }
@@ -403,8 +315,8 @@ void heartEnd()
 {
     if (heartBeginFlag)
     {
-    heartBeginFlag = 0;
-    pinMode(3, INPUT);
+        heartBeginFlag = 0;
+        pinMode(3, INPUT);
     }
 }
 
