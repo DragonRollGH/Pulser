@@ -1,15 +1,20 @@
+#include <ArduinoJson.h>
 #include <base64.hpp>
 #include <DNSServer.h>
 #include <ESP8266WiFi.h>
+#include <ESP8266WiFiMulti.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266httpUpdate.h>
+#include <LittleFS.h>
 #include <MQTT.h>
 #include <NeoPixelBus.h>
 #include <OneButton.h>
+#include <Ticker.h>
 #include <WiFiManager.h>
 #include <Wire.h>
 
+#include "DataStream.cpp"
 #include "Pixel.cpp"
 
 // const int MPU = 0x68;  //MPU-6050的I2C地址
@@ -45,18 +50,16 @@ byte sleep = sleepIdle;
 unsigned int flowFrame;
 unsigned long flowStart;
 
-unsigned int test = 0;
-unsigned long start;
-unsigned long end;
-
-WiFiClient WLAN;
+ESP8266WiFiMulti STA;
 MQTTClient MQTT(512);
-
-WiFiManager WM;
-
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> heart(PixelLen);
-
 OneButton button(PinTouch, false, false);
+WiFiClient WLAN;
+WiFiManager WM;
+Ticker heartTicker;
+
+DataStream stream;
+Pixel pixels[PixelLen];
 
 // class MenuSystem
 // {
@@ -151,96 +154,6 @@ ICACHE_RAM_ATTR void checkTicks()
 //     menu[menuCurrent].callback();
 // }
 
-class Pixel
-{
-public:
-    bool active = false;
-    float H;
-    float S;
-    float L;
-    float deltaL;
-    byte A;
-
-    void run(byte rH, byte rS, byte rL, byte rA, byte rB)
-    {
-        active = true;
-        H = rH / 255.0f;
-        S = rS / 255.0f;
-        L = rL / 255.0f;
-        A = rA;
-        deltaL = L / rB;
-    }
-
-    void update(void)
-    {
-        if (active)
-        {
-            if (A)
-            {
-                A -= 1;
-            }
-            else
-            {
-                L -= deltaL;
-                if (L <= 0)
-                {
-                    active = false;
-                }
-            }
-        }
-    }
-};
-Pixel pixels[PixelLen];
-
-class ByteStream
-{
-public:
-    const static unsigned int buf = 2048;
-    unsigned int wi = 0;
-    unsigned int ri = 0;
-    unsigned int avalible = 0;
-    byte stream[buf];
-
-    void write(byte w)
-    {
-        if (avalible <= buf)
-        {
-            stream[wi] = w;
-            wi = (wi + 1) % buf;
-            ++avalible;
-        }
-    }
-
-    void write(String w)
-    {
-        for (int i = 0; i < w.length(); ++i)
-        {
-            write(w[i]);
-        }
-    }
-
-    byte read(void)
-    {
-        if (avalible == 0)
-        {
-            return '\0';
-        }
-        else
-        {
-            ri = (ri + 1) % buf;
-            --avalible;
-            return stream[ri - 1];
-        }
-    }
-
-    void unwrite(unsigned int ui)
-    {
-        wi = (wi + buf - ui) % buf;
-        avalible -= ui;
-    }
-};
-ByteStream stream;
-
 void mqttConnect(void)
 {
     while (!MQTT.connect(MQTTClientid, MQTTUsername, MQTTPassword))
@@ -270,6 +183,9 @@ void mqttMsg(String &topic, String &payload)
             break;
         case 'D':
             cmdDefault(payload);
+            break;
+        case 'F':
+            cmdFile(payload);
             break;
         case 'H':
             cmdHSL(payload);
@@ -308,6 +224,12 @@ void cmdBattery(void)
 }
 
 void cmdDefault(String &payload) {}
+
+void cmdFile(String &payload)
+{
+    LittleFS.begin();
+    LittleFS.end();
+}
 
 void cmdHSL(String &payload)
 {
@@ -448,6 +370,7 @@ void runFlow(void)
     flowStart = millis();
     sleep = sleepRun;
     heart.Begin();
+    heartTicker.attach_ms(17, heartTick);
 }
 
 void stopFlow(void)
@@ -455,6 +378,42 @@ void stopFlow(void)
     flowStart = 0;
     sleep = sleepIdle;
     pinMode(3, INPUT);
+    heartTicker.detach();
+}
+
+void heartTick()
+{
+    setPixelsColor();
+}
+
+void WiFiConnect()
+{
+    STA.addAP("iTongji-manul", "YOUYUAN4411");
+    STA.addAP("DragonRoll", "1234567890");
+    byte indicator = 0;
+    for (byte i = 0; i < 20; ++i)
+    {
+        indicator = indicator ? 0 : 10;
+        heart.SetPixelColor(0, RgbColor(indicator, 0,0));
+        heart.Show();
+        if (STA.run() == WL_CONNECTED)
+        {
+            break;
+        }
+        delay(500);
+    }
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        heart.SetPixelColor(0, RgbColor(0, 0, 10));
+        heart.Show();
+        WM.autoConnect(AP_SSID);
+    }
+}
+
+void WiFiInitialize()
+{
+    WiFi.mode(WIFI_STA);
+    WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
 }
 
 // //向MPU6050写入一个字节的数据
@@ -513,16 +472,11 @@ void stopFlow(void)
 
 void setup()
 {
-    // Serial.begin(115200);
-    stream.write("&L05&N////;");
-    // heart.Begin();
-    runFlow();
-    setPixelsColor();
-
-    WiFi.mode(WIFI_STA);
-    WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
-
-    WM.autoConnect(AP_SSID);
+    // stream.write("&L05&N////;");
+    // runFlow();
+    heart.Begin();
+    WiFiInitialize();
+    WiFiConnect();
 
     MQTT.begin(MQTTServer, MQTTPort, WLAN);
     MQTT.onMessage(mqttMsg);
@@ -543,18 +497,12 @@ void setup()
     button.attachLongPressStart([]() { stream.write("&N8AAA;"); });
     button.attachLongPressStop([]() { stream.write("&N+AAA;"); });
 
-    stream.write("&N////;");
+    // stream.write("&N////;");
     // Serial.println("\nESP OK");
 }
 
 void loop()
 {
-    // test = (test + 1) % 1000;
-    // if (test == 0)
-    // {
-    //     start = millis();
-    // }
-
     if (!MQTT.connected())
     {
         mqttConnect();
@@ -563,28 +511,20 @@ void loop()
 
     button.tick();
 
-    if (flowStart)
-    {
-        if (millis() - flowStart >= flowFrame * FrameRate)
-        {
-            setPixelsColor();
-        }
-    }
-    else
-    {
-        if (stream.avalible >= flowCache)
-        {
-            runFlow();
-        }
-    }
-
-    // MPUloop();
-
-    // if (test == 0)
+    // if (flowStart)
     // {
-    //     end = millis();
-    //     MQTT.publish(MQTTPub, String(end) + ": " + String(end - start));
+    //     if (millis() - flowStart >= flowFrame * FrameRate)
+    //     {
+    //         setPixelsColor();
+    //     }
     // }
+    // else
+    // {
+    // }
+    if (!flowStart && stream.avalible >= flowCache)
+    {
+        runFlow();
+    }
 
     delay(sleep);
 }
