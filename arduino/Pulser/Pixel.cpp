@@ -1,4 +1,4 @@
-typedef unsigned char byte;
+#include <Arduino.h>
 
 class Pixel
 {
