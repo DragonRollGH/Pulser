@@ -24,7 +24,7 @@ const byte PixelLen = 20;
 const byte FrameRate = 17; // =1000ms/60fps
 const byte PinTouch = 12;
 const char *AP_SSID = "Rolls_Pulser";
-const char *Name = "Roll_v1.0.04181608";
+const char *Name = "Roll_v1.0.04192016";
 
 // const char *MQTTServer = "";
 // const int   MQTTPort = 1883;
@@ -43,7 +43,7 @@ byte L = 50;
 byte A = 5;
 byte B = 35;
 byte sleepRun = 1;
-byte sleepIdle = 50; // > 300 is useless
+byte sleepIdle = 100; // > 300 is useless
 unsigned int flowCache = 1;
 
 byte sleep = sleepIdle;
@@ -154,19 +154,6 @@ ICACHE_RAM_ATTR void checkTicks()
 //     menu[menuCurrent].callback();
 // }
 
-void mqttConnect(void)
-{
-    while (!MQTT.connect(MQTTClientid, MQTTUsername, MQTTPassword))
-    {
-        delay(500);
-    }
-    MQTT.subscribe(MQTTSub1);
-    delay(10);
-    MQTT.subscribe(MQTTSub2);
-    // Serial.println("MQTT connected");
-    cmdACK();
-}
-
 void mqttMsg(String &topic, String &payload)
 {
     // Serial.println("Message arrived [" + topic + "] " + payload);
@@ -213,14 +200,7 @@ void cmdACK(void)
 
 void cmdBattery(void)
 {
-    unsigned int adcs = 0;
-    for (byte i = 0; i < 10; i++)
-    {
-        adcs += analogRead(A0);
-        delay(10);
-    }
-    float voltage = (adcs / 10) * 247.0f / 1024 / 47 - 0.19;
-    MQTT.publish(MQTTPub, String(voltage));
+    MQTT.publish(MQTTPub, String(getBattery()));
 }
 
 void cmdDefault(String &payload) {}
@@ -260,6 +240,18 @@ void cmdUpdate(String &paylaod)
     ESPhttpUpdate.onStart([] { MQTT.publish(MQTTPub, "[httpUpdate] Started"); });
     ESPhttpUpdate.onError([](int err) { MQTT.publish(MQTTPub, String("[httpUpdate] Error: ") + ESPhttpUpdate.getLastErrorString().c_str()); });
     ESPhttpUpdate.update(url);
+}
+
+float getBattery()
+{
+    unsigned int adcs = 0;
+    for (byte i = 0; i < 10; i++)
+    {
+        adcs += analogRead(A0);
+        delay(10);
+    }
+    float voltage = (adcs / 10) * 247.0f / 1024 / 47 - 0.19;
+    return voltage;
 }
 
 void setPixelsColor(void)
@@ -386,19 +378,70 @@ void heartTick()
     setPixelsColor();
 }
 
-void WiFiConnect()
+void heartClear()
 {
-    STA.addAP("iTongji-manul", "YOUYUAN4411");
-    STA.addAP("DragonRoll", "1234567890");
+    heart.ClearTo(RgbColor(0, 0, 0));
+    heart.Show();
+}
+
+void heartClear(byte i)
+{
+    heart.SetPixelColor(i, RgbColor(0, 0, 0));
+    heart.Show();
+}
+
+void MQTTConnect()
+{
+    byte indicator = 0;
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        WiFiConnect();
+    }
+    for (byte i = 0; i < 120; ++i)
+    {
+        indicator = indicator ? 0 : 10;
+        heart.SetPixelColor(1, RgbColor(indicator, 0, 0));
+        heart.Show();
+        if (MQTT.connect(MQTTClientid, MQTTUsername, MQTTPassword))
+        {
+            heartClear(1);
+            break;
+        }
+        delay(500);
+    }
+    MQTT.subscribe(MQTTSub1);
+    delay(10);
+    MQTT.subscribe(MQTTSub2);
+    cmdACK();
+}
+
+void MQTTInitialize()
+{
+    MQTT.begin(MQTTServer, MQTTPort, WLAN);
+    MQTT.onMessage(mqttMsg);
+}
+
+void MQTTLoop()
+{
+    if (!MQTT.connected())
+    {
+        MQTTConnect();
+    }
+    MQTT.loop();
+}
+
+int WiFiConnect()
+{
     byte indicator = 0;
     for (byte i = 0; i < 20; ++i)
     {
         indicator = indicator ? 0 : 10;
-        heart.SetPixelColor(0, RgbColor(indicator, 0,0));
+        heart.SetPixelColor(0, RgbColor(indicator, 0, 0));
         heart.Show();
         if (STA.run() == WL_CONNECTED)
         {
-            break;
+            heartClear(0);
+            return 1;
         }
         delay(500);
     }
@@ -406,7 +449,17 @@ void WiFiConnect()
     {
         heart.SetPixelColor(0, RgbColor(0, 0, 10));
         heart.Show();
-        WM.autoConnect(AP_SSID);
+        WM.setConfigPortalTimeout(180);
+        WM.startConfigPortal(AP_SSID);
+        if (WiFi.status() == WL_CONNECTED)
+        {
+            heartClear(0);
+            return 1;
+        }
+        else
+        {
+            ESP.deepSleepMax();
+        }
     }
 }
 
@@ -414,6 +467,8 @@ void WiFiInitialize()
 {
     WiFi.mode(WIFI_STA);
     WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
+    STA.addAP("iTongji-manul", "YOUYUAN4411");
+    STA.addAP("DragonRoll", "1234567890");
 }
 
 // //向MPU6050写入一个字节的数据
@@ -472,55 +527,26 @@ void WiFiInitialize()
 
 void setup()
 {
-    // stream.write("&L05&N////;");
-    // runFlow();
     heart.Begin();
     WiFiInitialize();
     WiFiConnect();
+    MQTTInitialize();
+    MQTTConnect();
 
-    MQTT.begin(MQTTServer, MQTTPort, WLAN);
-    MQTT.onMessage(mqttMsg);
-
-    // Wire.begin();
-    // WriteMPUReg(0x6B, 0);
-    // MenuSystem m0({ 0, 1, 2, 3, 4 }, menuHome); //0
-    // MenuSystem m1({ 0, 5, 2, 3, 4 }, menuMain);     //1
-    // MenuSystem m2({ 0, 0, 0, 3, 4 }, menuACK);      //2
-    // MenuSystem m3({ 0, 0, 2, 0, 4 }, menuBattery);  //3
-    // MenuSystem m4({ 0, 0, 0, 0, 0 }, menuPulse);    //4
-    // MenuSystem m5({ 0, 0, 2, 3, 4 }, menuSubmenu);  //5
-    // menu = {m0,m1,m2,m3,m4,m5};
     attachInterrupt(digitalPinToInterrupt(PinTouch), checkTicks, CHANGE);
     button.attachClick([]() { stream.write("&NgAAA;"); });
     button.attachDoubleClick([]() { stream.write("&NwAAA;"); });
     button.attachMultiClick([]() { stream.write("&N4AAA;"); });
     button.attachLongPressStart([]() { stream.write("&N8AAA;"); });
     button.attachLongPressStop([]() { stream.write("&N+AAA;"); });
-
-    // stream.write("&N////;");
-    // Serial.println("\nESP OK");
 }
 
 void loop()
 {
-    if (!MQTT.connected())
-    {
-        mqttConnect();
-    }
-    MQTT.loop();
+    MQTTLoop();
 
     button.tick();
 
-    // if (flowStart)
-    // {
-    //     if (millis() - flowStart >= flowFrame * FrameRate)
-    //     {
-    //         setPixelsColor();
-    //     }
-    // }
-    // else
-    // {
-    // }
     if (!flowStart && stream.avalible >= flowCache)
     {
         runFlow();
