@@ -24,7 +24,7 @@ const byte PixelLen = 20;
 const byte FrameRate = 17; // =1000ms/60fps
 const byte PinTouch = 12;
 const char *AP_SSID = "Rolls_Pulser";
-const char *Name = "Roll_v1.0.04200019";
+const char *Name = "Roll_v1.1.04210012";
 
 // const char *MQTTServer = "";
 // const int   MQTTPort = 1883;
@@ -276,7 +276,7 @@ void runFlow(void)
     flowFrame = 1;
     flowStart = millis();
     sleep = sleepRun;
-    heart.Begin();
+    heartBegin();
     heartTicker.attach_ms(17, heartTick);
 }
 
@@ -284,7 +284,7 @@ void stopFlow(void)
 {
     flowStart = 0;
     sleep = sleepIdle;
-    pinMode(3, INPUT);
+    heartEnd();
     heartTicker.detach();
 }
 
@@ -443,7 +443,6 @@ void WiFiInitialize()
 
 void setup()
 {
-    heart.Begin();
     WiFiInitialize();
     MQTTInitialize();
 
@@ -457,7 +456,7 @@ void setup()
 
 void loop()
 {
-    MQTTLoop();
+    MQTTLoop(); //will keep connect wifi and mqtt in this function
 
     button.tick();
 
