@@ -1,9 +1,7 @@
 import Finger from "Finger";
 import Heart from "Heart";
 import PixelPositions from "PixelPositions";
-import {
-  hsv2rgb
-} from "../../utils/util";
+import {hsv2rgb, formatTime} from "../../utils/util";
 import * as MQTT from "../../utils/mqtt.min.4.1.10";
 
 const ctx = wx.createCanvasContext("heart");
@@ -30,6 +28,8 @@ const mqttOptions = {
   password: "31926a99217eb5796fdd4794d684b0dc"
 };
 var mqtt = null;
+
+var msgs = [""];
 
 const heartOptions = {
   canvasWidth: CanvasWidth,
@@ -125,6 +125,7 @@ function mqttSubscribe() {
   })
   mqtt.on('message', function (topic, message, packet) {
     console.log(packet.payload.toString());
+    printMsg(packet.payload.toString());
   })
 }
 
@@ -150,10 +151,29 @@ function onShow() {
   mqttConnect();
 }
 
+function sendCmd(event) {
+  let cmd = event.detail.value.cmd;
+  mqtt.publish("PB/D/R", cmd);
+  printMsg(cmd);
+}
+
+function printMsg(msg) {
+  let newMsg = `${formatTime(new Date())} ${String(msg)}`;
+  msgs.unshift(newMsg);
+  if (msgs.length > 10) {
+    msgs = msgs.slice(0, 10);
+  }
+  let setMsg = msgs.join("\n");
+  page.setData({
+    msg: setMsg
+  })
+}
+
 Page({
   data: {
     hueBlock: "red",
     huePressed: false,
+    msg: ""
   },
   heartTouchStart: heartTouchStart,
   heartTouchMove: heartTouchMove,
@@ -168,4 +188,5 @@ Page({
   onPullDownRefresh: onPullDownRefresh,
   onShow: onShow,
   preventDefault: () => {},
+  sendCmd: sendCmd,
 });
