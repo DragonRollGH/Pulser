@@ -4,6 +4,79 @@
   justify-content: center;
 }
 
+.pub {
+  padding: 20rpx 0rpx 0rpx;
+  width: 200rpx;
+}
+
+.pubButton {
+  position: relative;
+  height: 70rpx;
+  width: 140rpx;
+  background-color: whitesmoke;
+  border-radius: 70rpx;
+}
+
+.pubButtonL,
+.pubButtonM,
+.pubButtonR {
+  position: absolute;
+  top: -5rpx;
+  left: -5rpx;
+  bottom: -5rpx;
+  background: rgba(0, 128, 0, 0.25);
+  border: 10rpx solid rgba(0, 128, 0, 0.5);
+  border-radius: 60rpx;
+  transition: all 0.4s; 
+}
+.pubButtonL {
+  width: 60rpx;
+}
+
+.pubButtonM {
+  width: 130rpx;
+}
+
+.pubButtonR {
+  width: 60rpx;
+  margin-left: 70rpx;
+}
+
+.pubUserL,
+.pubUserR {
+  position: relative;
+  font-size: 50rpx;
+  font-weight: 800;
+  top: -75rpx;
+  height: 0;
+}
+
+.pubUserL {
+  left: -18rpx;
+}
+
+.pubUserR {
+  left: 16rpx;
+}
+
+.pubUserOn {
+  color: green;
+
+}
+
+.pubUserOff {
+  color: gray;
+}
+
+
+
+
+.heart {
+  width: 750rpx; 
+  height: 750rpx;
+}
+
+
 .hueSlider {
   background: -webkit-linear-gradient(left, #f00 5%, #ff0 17%, #0f0 33%, #0ff 55%, #00f 67%, #f0f 83%, #f00 100%);
   width: 600rpx;
@@ -13,4 +86,13 @@
 .lightnessSlider {
   width: 600rpx;
   margin: 40rpx auto;
+}
+
+.forU {
+  width: 300rpx; 
+  height: 300rpx;
+}
+
+.cmd {
+  margin: 0rpx 40rpx 100rpx 40rpx;
 }

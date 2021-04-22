@@ -1,7 +1,7 @@
 <form bindsubmit="login">
   <view class="weui-form__text-area">
     <view>
-      <image style="width: 300rpx; height: 300rpx;" src="../../img/avatar.jpg" mode="aspectFit"></image>
+      <image class="forU"  src="../../img/avatar.jpg" mode="aspectFit"></image>
     </view>
     <h2 class="weui-form__title">登录</h2>
     <view wx:if="{{errorUsername}}" class="weui-form__desc" style="color:red">用户名错误</view>

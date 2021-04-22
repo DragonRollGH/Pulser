@@ -4,47 +4,65 @@ import PixelPositions from "PixelPositions";
 import {hsv2rgb, formatTime} from "../../utils/util";
 import * as MQTT from "../../utils/mqtt.min.4.1.10";
 
-const ctx = wx.createCanvasContext("heart");
-var page;
-
+var ctx = wx.createCanvasContext("heart");
 const CanvasWidth = 750;
 const CanvasHeight = 750;
+var page;
+
 const FingerRadius = 100;
+var finger = new Finger(PixelPositions, FingerRadius);
+
 const HeartFragmentation = 30;
-const PixelColors = {
+const PixelRadius = 30;
+var pixelColors = {
   H: 0,
   S: 255,
   L: 5,
   A: 5,
   B: 35
-}
-const PixelRadius = 30;
+};
+var heartOptions = {
+  canvasWidth: CanvasWidth,
+  canvasHeight: CanvasHeight,
+  ctx: ctx,
+  fragmentation: HeartFragmentation,
+};
+var heart = new Heart(PixelPositions, PixelRadius, heartOptions);
 
 const MqttUrl = "wxs://ajdnaud.iot.gz.baidubce.com/mqtt";
-const mqttOptions = {
+var mqttOptions = {
   connectTimeout: 5000, //超时时间
   clientId: 'wx_' + new Date().getMilliseconds(),
   username: "thingidp@ajdnaud|PB_JS_1",
   password: "31926a99217eb5796fdd4794d684b0dc"
 };
 var mqtt = null;
-
 var msgs = [""];
+var pub = 0;
+var pubButton = [
+  "pubButtonL",
+  "pubButtonM",
+  "pubButtonR",
+  "pubButtonM",
+];
+var pubTopic = [
+  "PB/D/M",
+  "PB/D/MR",
+  "PB/D/R",
+  "PB/D/MR",
+];
 
-const heartOptions = {
-  canvasWidth: CanvasWidth,
-  canvasHeight: CanvasHeight,
-  ctx: ctx,
-  fragmentation: HeartFragmentation,
-};
-const heart = new Heart(PixelPositions, PixelRadius, heartOptions);
-
-const finger = new Finger(PixelPositions, FingerRadius);
 
 function animate() {
   finger.update();
-  heart.update(finger.cursoredIds, PixelColors);
+  heart.update(finger.cursoredIds, pixelColors);
   hueRainbow();
+}
+
+function cmdSend(event) {
+  let cmd = event.detail.value.cmd;
+  mqtt.publish(pubTopic[pub], cmd);
+  printMsg(cmd);
 }
 
 function heartTouchStart(event) {
@@ -66,43 +84,38 @@ function heartTouchCancel(event) {
 
 function hueChange(event) {
   let h = event.detail.value;
-  PixelColors.H = h;
-  this.setData({
+  pixelColors.H = h;
+  page.setData({
     hueBlock: `rgb(${hsv2rgb(Math.round(h * 359 / 255), 1 ,1)})`
   })
-
-  // h = ("0" + h.toString(16)).substr(-2);
-  // mqtt.publish("PB/D/R", ":H&H" + h);
 }
 
 function hueChanging(event) {
   let h = event.detail.value;
-  PixelColors.H = h;
-  this.setData({
+  pixelColors.H = h;
+  page.setData({
     hueBlock: `rgb(${hsv2rgb(Math.round(h * 359 / 255), 1 ,1)})`
   })
 }
 
 function huePress() {
-  this.data.huePressed = !this.data.huePressed;
+  page.data.huePressed = !page.data.huePressed;
   wx.vibrateShort({});
 }
 
 function hueRainbow() {
   if (page.data.huePressed) {
-    PixelColors.H = (PixelColors.H + 2) % 255;
+    pixelColors.H = (pixelColors.H + 2) % 255;
     page.setData({
-      hue: PixelColors.H,
-      hueBlock: `rgb(${hsv2rgb(Math.round(PixelColors.H * 359 / 255), 1 ,1)})`,
+      hue: pixelColors.H,
+      hueBlock: `rgb(${hsv2rgb(Math.round(pixelColors.H * 359 / 255), 1 ,1)})`,
     })
   }
 }
 
 function lightnessChange(event) {
   let l = event.detail.value;
-  PixelColors.L = l;
-  // l = ("0" + l.toString(16)).substr(-2);
-  // mqtt.publish("PB/D/R", ":H&L" + l);
+  pixelColors.L = l;
 }
 
 function mqttConnect() {
@@ -117,6 +130,11 @@ function mqttConnect() {
 function mqttSubscribe() {
   mqtt.on('connect', (e) => {
     console.log('成功连接服务器!');
+  })
+  mqtt.subscribe('PB/U/M', (err) => {
+    if (!err) {
+      console.log("订阅成功: PB/U/M");
+    }
   })
   mqtt.subscribe('PB/U/R', (err) => {
     if (!err) {
@@ -151,12 +169,6 @@ function onShow() {
   mqttConnect();
 }
 
-function sendCmd(event) {
-  let cmd = event.detail.value.cmd;
-  mqtt.publish("PB/D/R", cmd);
-  printMsg(cmd);
-}
-
 function printMsg(msg) {
   let newMsg = `${formatTime(new Date())} ${String(msg)}`;
   msgs.unshift(newMsg);
@@ -169,11 +181,19 @@ function printMsg(msg) {
   })
 }
 
+function pubChange() {
+  pub = ++pub % 4;
+  page.setData({
+      pubButton: pubButton[pub],
+  })
+  pubTopic
+}
+
 Page({
+  cmdSend: cmdSend,
   data: {
     hueBlock: "red",
     huePressed: false,
-    msg: ""
   },
   heartTouchStart: heartTouchStart,
   heartTouchMove: heartTouchMove,
@@ -188,5 +208,5 @@ Page({
   onPullDownRefresh: onPullDownRefresh,
   onShow: onShow,
   preventDefault: () => {},
-  sendCmd: sendCmd,
+  pubChange: pubChange,
 });

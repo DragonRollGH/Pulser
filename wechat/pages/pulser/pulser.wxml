@@ -1,6 +1,20 @@
 <view catchtouchmove="preventDefault">
   <view class="center">
-    <canvas style="width: 750rpx; height: 750rpx;"
+    <view class="pub"  bindtap="pubChange">
+      <view class="center">
+        <view class="pubButton">
+          <view class="{{pubButton}}"></view>
+        </view>
+      </view>
+      <view class="center">
+        <text class="pubUserL pubUserOff">M</text>
+        <text class="pubUserR pubUserOn">R</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="center">
+    <canvas class="heart"
       disable-scroll="true"
       canvas-id="heart"
       bindtouchstart="heartTouchStart"
@@ -32,26 +46,29 @@
 </view>
 
 <view class="center">
-  <image style="width: 300rpx; height: 300rpx;" 
+  <image class="forU"
   src="../../img/avatar.jpg" 
   mode="aspectFit"></image>
 </view>
 
-<form bindsubmit="sendCmd">
-  <view class="weui-form__control-area">
-    <view class="weui-cells weui-cells_form">
-      <view class="weui-cell weui-cell_active">
-        <view class="weui-cell__bd">
-          <input class="weui-input" name="cmd" />
+<view class="cmd">
+  <form bindsubmit="cmdSend">
+    <view class="weui-form__control-area">
+      <view class="weui-cells weui-cells_form">
+        <view class="weui-cell weui-cell_active">
+          <view class="weui-cell__bd">
+            <input class="weui-input" name="cmd" />
+          </view>
         </view>
       </view>
     </view>
+    <button class="weui-btn weui-btn_primary" form-type="submit">发送命令</button>
+  </form>
+  
+  <view>
+    <text>
+      {{msg}}
+    </text>
   </view>
-  <button class="weui-btn weui-btn_primary" form-type="submit">发送命令</button>
-</form>
 
-<view style="margin: 0rpx 30rpx 100rpx">
-  <text>
-    {{msg}}
-  </text>
 </view>
