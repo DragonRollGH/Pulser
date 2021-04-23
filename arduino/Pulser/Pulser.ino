@@ -244,7 +244,7 @@ byte parseHex(byte L)
         return L - '0';
     if ((L >= 'A') && (L <= 'F'))
         return L + 10 - 'A';
-    if ((L >= 'a') && (L <= 'a'))
+    if ((L >= 'a') && (L <= 'f'))
         return L + 10 - 'a';
     return -1;
 }

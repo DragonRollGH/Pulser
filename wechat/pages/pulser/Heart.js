@@ -81,7 +81,7 @@ class Heart {
         let c = ("0" + this.colors[k].toString(16)).substr(-2);
         this.stream += `&${k}${c}`;
         this.oldColors[k] = this.colors[k];
-        // console.log(`&${k}${c}`);
+        console.log(`&${k}${c}`);
       }
     }
     this.streamWriteN(argN);
@@ -97,7 +97,7 @@ class Heart {
     this.streamFrame = 0;
     if (this.options.mqtt) {
       this.options.mqtt.publish("PB/D/R", this.stream);
-      console.log(this.stream);
+      // console.log(this.stream);
     }
     this.stream = ":H";
   }
