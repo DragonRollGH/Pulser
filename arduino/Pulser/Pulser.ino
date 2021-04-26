@@ -24,7 +24,10 @@ const byte PixelLen = 20;
 const byte FrameRate = 17; // =1000ms/60fps
 const byte PinTouch = 12;
 const char *AP_SSID = "Rolls_Pulser";
-const char *Name = "Roll_v1.1.04261655";
+const char *Name = "Roll_v1.1.04261733";
+const byte sleepRun = 1;
+const byte sleepIdle = 255; // > 300 is useless
+const byte sleepStandby = 100; // > 300 is useless
 
 // const char *MQTTServer = "";
 // const int   MQTTPort = 1883;
@@ -42,17 +45,18 @@ byte S = 255;
 byte L = 50;
 byte A = 5;
 byte B = 35;
-byte sleepRun = 1;
-byte sleepIdle = 100; // > 300 is useless
-unsigned int flowCache = 1;
+
+bool heartBeginFlag = 0;
+
 byte indicatorLightness = 10;
 byte indicatorPin = 10;
 bool indicatorToggleFlag = 0;
-bool heartBeginFlag = 0;
 
 byte sleep = sleepIdle;
-unsigned int flowFrame;
-unsigned long flowStart;
+
+bool streamBeginFlag = 0;
+unsigned int streamCache = 1;
+
 
 MQTTClient MQTT(512);
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> heart(PixelLen);
@@ -73,6 +77,26 @@ struct WiFiEntry {
 };
 std::vector<WiFiEntry> WiFiList;
 
+void attachs()
+{
+    attachInterrupt(digitalPinToInterrupt(PinTouch), buttonTickIrq, CHANGE);
+    button.attachClick([]() { stream.write("&NgAAA;"); });
+    button.attachDoubleClick([]() { stream.write("&NwAAA;"); });
+    button.attachMultiClick([]() { stream.write("&N4AAA;"); });
+    button.attachLongPressStart([]() { stream.write("&N8AAA;"); });
+    button.attachLongPressStop([]() { stream.write("&N+AAA;"); });
+}
+
+void detachs()
+{
+    streamEnd();
+    button.reset();
+    detachInterrupt(digitalPinToInterrupt(PinTouch));
+    buttonTicker1.detach();
+    buttonTicker2.detach();
+    buttonTicker3.detach();
+}
+
 ICACHE_RAM_ATTR void buttonTickIrq()
 {
     button.tick();
@@ -89,12 +113,12 @@ void buttonTickTmr()
     button.tick();
 }
 
-void cmdACK(void)
+void cmdACK()
 {
     MQTT.publish(MQTTPub, Name);
 }
 
-void cmdBattery(void)
+void cmdBattery()
 {
     MQTT.publish(MQTTPub, String(getBattery()));
 }
@@ -150,9 +174,73 @@ float getBattery()
     return voltage;
 }
 
-void setPixelsColor(void)
+byte parseHex(byte L)
 {
-    ++flowFrame;
+    if ((L >= '0') && (L <= '9'))
+        return L - '0';
+    if ((L >= 'A') && (L <= 'F'))
+        return L + 10 - 'A';
+    if ((L >= 'a') && (L <= 'f'))
+        return L + 10 - 'a';
+    return -1;
+}
+
+byte parseHex(byte H, byte L)
+{
+    return parseHex(H) * 16 + parseHex(L);
+}
+
+void heartBegin()
+{
+    if (!heartBeginFlag)
+    {
+        heartBeginFlag = 1;
+        heart.Begin();
+    }
+}
+
+void heartClear()
+{
+    heartBegin();
+    heart.ClearTo(RgbColor(0, 0, 0));
+    heart.Show();
+}
+
+void heartClear(byte i)
+{
+    heartBegin();
+    heart.SetPixelColor(i, RgbColor(0, 0, 0));
+    heart.Show();
+}
+
+void heartDefult() {}
+
+void heartEnd()
+{
+    if (heartBeginFlag)
+    {
+        heartBeginFlag = 0;
+        pinMode(3, INPUT);
+    }
+}
+
+void heartRun(byte b1, byte b2, byte b3, byte b4)
+{
+    byte base[4] = {b1, b2, b3, b4};
+    byte arry[3];
+    decode_base64(base, arry);
+    for (byte i = 0; i < PixelLen; i++)
+    {
+        if (arry[i / 8] & (byte)128)
+        {
+            pixels[i].run(H, S, L, A, B);
+        }
+        arry[i / 8] <<= 1;
+    }
+}
+
+void heartSet()
+{
     bool running = 1;
     while (stream.avalible && running)
     {
@@ -162,7 +250,7 @@ void setPixelsColor(void)
             switch (stream.read())
             {
             case 'D':
-                useDefault();
+                heartDefult();
                 break;
             case 'H':
                 H = parseHex(stream.read(), stream.read());
@@ -179,11 +267,8 @@ void setPixelsColor(void)
             case 'B':
                 B = parseHex(stream.read(), stream.read());
                 break;
-            case 'C':
-                setHSL(stream.read(), stream.read(), stream.read(), stream.read());
-                break;
             case 'N':
-                runPixels(stream.read(), stream.read(), stream.read(), stream.read());
+                heartRun(stream.read(), stream.read(), stream.read(), stream.read());
                 break;
             default:
                 break;
@@ -213,97 +298,13 @@ void setPixelsColor(void)
     heart.Show();
     if (!anyActive)
     {
-        stopFlow();
-    }
-}
-
-void useDefault(void) {}
-
-byte parseHex(byte L)
-{
-    if ((L >= '0') && (L <= '9'))
-        return L - '0';
-    if ((L >= 'A') && (L <= 'F'))
-        return L + 10 - 'A';
-    if ((L >= 'a') && (L <= 'f'))
-        return L + 10 - 'a';
-    return -1;
-}
-
-byte parseHex(byte H, byte L)
-{
-    return parseHex(H) * 16 + parseHex(L);
-}
-
-void setHSL(byte b1, byte b2, byte b3, byte b4) {}
-
-void runPixels(byte b1, byte b2, byte b3, byte b4)
-{
-    byte base[4] = {b1, b2, b3, b4};
-    byte arry[3];
-    decode_base64(base, arry);
-    for (byte i = 0; i < PixelLen; i++)
-    {
-        if (arry[i / 8] & (byte)128)
-        {
-            pixels[i].run(H, S, L, A, B);
-        }
-        arry[i / 8] <<= 1;
-    }
-}
-
-void runFlow(void)
-{
-    flowFrame = 1;
-    flowStart = millis();
-    sleep = sleepRun;
-    heartBegin();
-    heartTicker.attach_ms(17, heartTick);
-}
-
-void stopFlow(void)
-{
-    flowStart = 0;
-    sleep = sleepIdle;
-    heartEnd();
-    heartTicker.detach();
-}
-
-void heartBegin()
-{
-    if (!heartBeginFlag)
-    {
-        heartBeginFlag = 1;
-        heart.Begin();
-    }
-}
-
-void heartClear()
-{
-    heartBegin();
-    heart.ClearTo(RgbColor(0, 0, 0));
-    heart.Show();
-}
-
-void heartClear(byte i)
-{
-    heartBegin();
-    heart.SetPixelColor(i, RgbColor(0, 0, 0));
-    heart.Show();
-}
-
-void heartEnd()
-{
-    if (heartBeginFlag)
-    {
-        heartBeginFlag = 0;
-        pinMode(3, INPUT);
+        streamEnd();
     }
 }
 
 void heartTick()
 {
-    setPixelsColor();
+    heartSet();
 }
 
 void indicatorClear()
@@ -353,6 +354,7 @@ void indicatorToggle(char c)
 
 void MQTTConnect()
 {
+    detachs();
     indicatorClear();
     for (byte i = 0; i < 120; ++i)
     {
@@ -369,6 +371,7 @@ void MQTTConnect()
     MQTT.subscribe(MQTTSub2);
     cmdACK();
     heartClear();
+    attachs();
 }
 
 void MQTTInitialize()
@@ -386,9 +389,9 @@ void MQTTLoop()
     MQTT.loop();
 }
 
-
 void MQTTMsg(String &topic, String &payload)
 {
+    // sleep = sleepStandby;
     if (payload.length() > 1 && payload[0] == ':')
     {
         switch (payload[1])
@@ -424,6 +427,28 @@ void MQTTMsg(String &topic, String &payload)
     }
 }
 
+void streamBegin()
+{
+    streamBeginFlag = 1;
+    heartBegin();
+    heartTicker.attach_ms(FrameRate, heartTick);
+}
+
+void streamEnd()
+{
+    streamBeginFlag = 0;
+    heartTicker.detach();
+    heartEnd();
+}
+
+void streamLoop()
+{
+    if (stream.avalible >= streamCache && !streamBeginFlag)
+    {
+        streamBegin();
+    }
+}
+
 void WiFiAdd(String SSID, String PASS)
 {
     WiFiList.push_back(WiFiEntry{SSID, PASS});
@@ -431,7 +456,6 @@ void WiFiAdd(String SSID, String PASS)
 
 int WiFiConnect()
 {
-    //stopTicker!
     if (WiFi.status() != WL_CONNECTED)
     {
         indicatorSet('r');
@@ -509,23 +533,14 @@ void setup()
 {
     WiFiInitialize();
     MQTTInitialize();
-
-    attachInterrupt(digitalPinToInterrupt(PinTouch), buttonTickIrq, CHANGE);
-    button.attachClick([]() { stream.write("&NgAAA;"); });
-    button.attachDoubleClick([]() { stream.write("&NwAAA;"); });
-    button.attachMultiClick([]() { stream.write("&N4AAA;"); });
-    button.attachLongPressStart([]() { stream.write("&N8AAA;"); });
-    button.attachLongPressStop([]() { stream.write("&N+AAA;"); });
+    attachs();
 }
 
 void loop()
 {
     MQTTLoop(); //will keep connect wifi and mqtt in this function
 
-    if (!flowStart && stream.avalible >= flowCache)
-    {
-        runFlow();
-    }
+    streamLoop();
 
     delay(sleep);
 }
