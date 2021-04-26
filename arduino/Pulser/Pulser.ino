@@ -2,7 +2,6 @@
 #include <base64.hpp>
 #include <DNSServer.h>
 #include <ESP8266WiFi.h>
-// #include <ESP8266WiFiMulti.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266httpUpdate.h>
@@ -25,7 +24,7 @@ const byte PixelLen = 20;
 const byte FrameRate = 17; // =1000ms/60fps
 const byte PinTouch = 12;
 const char *AP_SSID = "Rolls_Pulser";
-const char *Name = "Roll_v1.1.04261633";
+const char *Name = "Roll_v1.1.04261655";
 
 // const char *MQTTServer = "";
 // const int   MQTTPort = 1883;
@@ -45,7 +44,7 @@ byte A = 5;
 byte B = 35;
 byte sleepRun = 1;
 byte sleepIdle = 100; // > 300 is useless
-unsigned int flowCache = 200;
+unsigned int flowCache = 1;
 byte indicatorLightness = 10;
 byte indicatorPin = 10;
 bool indicatorToggleFlag = 0;
@@ -55,14 +54,15 @@ byte sleep = sleepIdle;
 unsigned int flowFrame;
 unsigned long flowStart;
 
-// ESP8266WiFiMulti STA;
 MQTTClient MQTT(512);
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> heart(PixelLen);
 OneButton button(PinTouch, false, false);
 WiFiClient WLAN;
 WiFiManager WM;
 Ticker heartTicker;
-Ticker buttonTicker;
+Ticker buttonTicker1;
+Ticker buttonTicker2;
+Ticker buttonTicker3;
 
 DataStream stream;
 Pixel pixels[PixelLen];
@@ -76,13 +76,16 @@ std::vector<WiFiEntry> WiFiList;
 ICACHE_RAM_ATTR void buttonTickIrq()
 {
     button.tick();
-    buttonTicker.detach();
-    buttonTicker.once_ms(310, buttonTickTmr);
+    buttonTicker1.detach();
+    buttonTicker2.detach();
+    buttonTicker3.detach();
+    buttonTicker1.once_ms(60, buttonTickTmr);
+    buttonTicker2.once_ms(310, buttonTickTmr);
+    buttonTicker3.once_ms(810, buttonTickTmr);
 }
 
 void buttonTickTmr()
 {
-    button.tick();
     button.tick();
 }
 
@@ -518,8 +521,6 @@ void setup()
 void loop()
 {
     MQTTLoop(); //will keep connect wifi and mqtt in this function
-
-    // button.tick();
 
     if (!flowStart && stream.avalible >= flowCache)
     {
