@@ -2,7 +2,7 @@
 #include <base64.hpp>
 #include <DNSServer.h>
 #include <ESP8266WiFi.h>
-#include <ESP8266WiFiMulti.h>
+// #include <ESP8266WiFiMulti.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266httpUpdate.h>
@@ -11,6 +11,7 @@
 #include <NeoPixelBus.h>
 #include <OneButton.h>
 #include <Ticker.h>
+#include <vector>
 #include <WiFiManager.h>
 #include <Wire.h>
 
@@ -24,7 +25,7 @@ const byte PixelLen = 20;
 const byte FrameRate = 17; // =1000ms/60fps
 const byte PinTouch = 12;
 const char *AP_SSID = "Rolls_Pulser";
-const char *Name = "Roll_v1.1.04210012";
+const char *Name = "Roll_v1.1.04261201";
 
 // const char *MQTTServer = "";
 // const int   MQTTPort = 1883;
@@ -50,12 +51,11 @@ byte indicatorPin = 10;
 bool indicatorToggleFlag = 0;
 bool heartBeginFlag = 0;
 
-
 byte sleep = sleepIdle;
 unsigned int flowFrame;
 unsigned long flowStart;
 
-ESP8266WiFiMulti STA;
+// ESP8266WiFiMulti STA;
 MQTTClient MQTT(512);
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> heart(PixelLen);
 OneButton button(PinTouch, false, false);
@@ -65,6 +65,12 @@ Ticker heartTicker;
 
 DataStream stream;
 Pixel pixels[PixelLen];
+
+struct WiFiEntry {
+    String SSID;
+    String PASS;
+};
+std::vector<WiFiEntry> WiFiList;
 
 ICACHE_RAM_ATTR void checkTicks()
 {
@@ -327,6 +333,7 @@ void heartTick()
 
 void indicatorClear()
 {
+    indicatorToggleFlag = false;
     heartBegin();
     heart.SetPixelColor(indicatorPin, RgbColor(0, 0, 0));
     heart.Show();
@@ -334,6 +341,7 @@ void indicatorClear()
 
 void indicatorSet(char c)
 {
+    indicatorToggleFlag = true;
     heartBegin();
     RgbColor color;
     switch (c)
@@ -370,18 +378,16 @@ void indicatorToggle(char c)
 
 void MQTTConnect()
 {
+    indicatorClear();
     for (byte i = 0; i < 120; ++i)
     {
-        indicatorToggle('g');
-        if (WiFi.status() != WL_CONNECTED)
-        {
-            WiFiConnect();
-        }
+        WiFiConnect();
         if (MQTT.connect(MQTTClientid, MQTTUsername, MQTTPassword))
         {
             break;
         }
         delay(500);
+        indicatorToggle('g');
     }
     MQTT.subscribe(MQTTSub1);
     delay(10);
@@ -405,31 +411,60 @@ void MQTTLoop()
     MQTT.loop();
 }
 
+void WiFiAdd(String SSID, String PASS)
+{
+    WiFiList.push_back(WiFiEntry{SSID, PASS});
+}
+
 int WiFiConnect()
 {
     //stopTicker!
-    for (byte i = 0; i < 30; ++i)
-    {
-        indicatorToggle('r');
-        if (STA.run() == WL_CONNECTED)
-        {
-            return 1;
-        }
-        delay(500);
-    }
     if (WiFi.status() != WL_CONNECTED)
     {
-        indicatorSet('b');
-        WM.setConfigPortalTimeout(180);
-        WM.startConfigPortal(AP_SSID);
-        if (WiFi.status() == WL_CONNECTED)
+        indicatorSet('r');
+        WiFi.disconnect();
+        WiFi.scanDelete();
+        for (byte k = 0; k < 3; ++k)
         {
-            return 1;
+            byte scanResult = WiFi.scanNetworks();
+            byte bestWiFi = 255;
+            if (scanResult > 0)
+            {
+                int bestRSSI = INT_MIN;
+                for (byte i = 0; i < scanResult; ++i)
+                {
+                    for (byte j = 0; j < WiFiList.size(); ++j)
+                    {
+                        if (WiFi.SSID(i) == WiFiList[j].SSID)
+                        {
+                            if (WiFi.RSSI(i) > bestRSSI)
+                            {
+                                bestWiFi = j;
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            WiFi.scanDelete();
+
+            if (bestWiFi != 255)
+            {
+                WiFi.begin(WiFiList[bestWiFi].SSID, WiFiList[bestWiFi].PASS);
+                for (byte i = 0; i < 60; ++i)
+                {
+                    indicatorToggle('r');
+                    if (WiFi.status() == WL_CONNECTED)
+                    {
+                        indicatorClear();
+                        return 1;
+                    }
+                    delay(500);
+                }
+            }
         }
-        else
-        {
-            ESP.deepSleepMax();
-        }
+
+        WiFiPortal();
     }
 }
 
@@ -437,12 +472,30 @@ void WiFiInitialize()
 {
     WiFi.mode(WIFI_STA);
     WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
-    STA.addAP("iTongji-manul", "YOUYUAN4411");
-    STA.addAP("DragonRoll", "1234567890");
+    // STA.addAP("iTongji-manul", "YOUYUAN4411");
+    // STA.addAP("DragonRoll", "1234567890");
+}
+
+int WiFiPortal()
+{
+    indicatorSet('b');
+    WM.setConfigPortalTimeout(180);
+    WM.startConfigPortal(AP_SSID);
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        return 1;
+    }
+    else
+    {
+        indicatorClear();
+        ESP.deepSleepMax();
+    }
 }
 
 void setup()
 {
+    // WiFiAdd("iTongji-manul", "YOUYUAN4411");
+    WiFiAdd("DragonRoll", "1234567890");
     WiFiInitialize();
     MQTTInitialize();
 
