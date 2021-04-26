@@ -25,7 +25,7 @@ const byte PixelLen = 20;
 const byte FrameRate = 17; // =1000ms/60fps
 const byte PinTouch = 12;
 const char *AP_SSID = "Rolls_Pulser";
-const char *Name = "Roll_v1.1.04261201";
+const char *Name = "Roll_v1.1.04261633";
 
 // const char *MQTTServer = "";
 // const int   MQTTPort = 1883;
@@ -45,7 +45,7 @@ byte A = 5;
 byte B = 35;
 byte sleepRun = 1;
 byte sleepIdle = 100; // > 300 is useless
-unsigned int flowCache = 1;
+unsigned int flowCache = 200;
 byte indicatorLightness = 10;
 byte indicatorPin = 10;
 bool indicatorToggleFlag = 0;
@@ -62,6 +62,7 @@ OneButton button(PinTouch, false, false);
 WiFiClient WLAN;
 WiFiManager WM;
 Ticker heartTicker;
+Ticker buttonTicker;
 
 DataStream stream;
 Pixel pixels[PixelLen];
@@ -72,46 +73,17 @@ struct WiFiEntry {
 };
 std::vector<WiFiEntry> WiFiList;
 
-ICACHE_RAM_ATTR void checkTicks()
+ICACHE_RAM_ATTR void buttonTickIrq()
 {
     button.tick();
+    buttonTicker.detach();
+    buttonTicker.once_ms(310, buttonTickTmr);
 }
 
-void mqttMsg(String &topic, String &payload)
+void buttonTickTmr()
 {
-    if (payload.length() > 1 && payload[0] == ':')
-    {
-        switch (payload[1])
-        {
-        case 'A':
-            cmdACK();
-            break;
-        case 'B':
-            cmdBattery();
-            break;
-        case 'D':
-            cmdDefault(payload);
-            break;
-        case 'F':
-            cmdFile(payload);
-            break;
-        case 'H':
-            cmdHSL(payload);
-            break;
-        case 'P':
-            cmdPulse(payload);
-            break;
-        case 'R':
-            cmdRGB(payload);
-            break;
-        case 'U':
-            cmdUpdate(payload);
-            break;
-        default:
-            MQTT.publish(MQTTPub, "Unknown command");
-            break;
-        }
-    }
+    button.tick();
+    button.tick();
 }
 
 void cmdACK(void)
@@ -399,7 +371,7 @@ void MQTTConnect()
 void MQTTInitialize()
 {
     MQTT.begin(MQTTServer, MQTTPort, WLAN);
-    MQTT.onMessage(mqttMsg);
+    MQTT.onMessage(MQTTMsg);
 }
 
 void MQTTLoop()
@@ -409,6 +381,44 @@ void MQTTLoop()
         MQTTConnect();
     }
     MQTT.loop();
+}
+
+
+void MQTTMsg(String &topic, String &payload)
+{
+    if (payload.length() > 1 && payload[0] == ':')
+    {
+        switch (payload[1])
+        {
+        case 'A':
+            cmdACK();
+            break;
+        case 'B':
+            cmdBattery();
+            break;
+        case 'D':
+            cmdDefault(payload);
+            break;
+        case 'F':
+            cmdFile(payload);
+            break;
+        case 'H':
+            cmdHSL(payload);
+            break;
+        case 'P':
+            cmdPulse(payload);
+            break;
+        case 'R':
+            cmdRGB(payload);
+            break;
+        case 'U':
+            cmdUpdate(payload);
+            break;
+        default:
+            MQTT.publish(MQTTPub, "Unknown command");
+            break;
+        }
+    }
 }
 
 void WiFiAdd(String SSID, String PASS)
@@ -472,14 +482,14 @@ void WiFiInitialize()
 {
     WiFi.mode(WIFI_STA);
     WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
-    // STA.addAP("iTongji-manul", "YOUYUAN4411");
-    // STA.addAP("DragonRoll", "1234567890");
+    WiFiAdd("iTongji-manul", "YOUYUAN4411");
+    WiFiAdd("DragonRoll", "1234567890");
 }
 
 int WiFiPortal()
 {
     indicatorSet('b');
-    WM.setConfigPortalTimeout(180);
+    WM.setConfigPortalTimeout(10);
     WM.startConfigPortal(AP_SSID);
     if (WiFi.status() == WL_CONNECTED)
     {
@@ -488,18 +498,16 @@ int WiFiPortal()
     else
     {
         indicatorClear();
-        ESP.deepSleepMax();
+        ESP.deepSleepInstant(INT32_MAX);
     }
 }
 
 void setup()
 {
-    // WiFiAdd("iTongji-manul", "YOUYUAN4411");
-    WiFiAdd("DragonRoll", "1234567890");
     WiFiInitialize();
     MQTTInitialize();
 
-    attachInterrupt(digitalPinToInterrupt(PinTouch), checkTicks, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(PinTouch), buttonTickIrq, CHANGE);
     button.attachClick([]() { stream.write("&NgAAA;"); });
     button.attachDoubleClick([]() { stream.write("&NwAAA;"); });
     button.attachMultiClick([]() { stream.write("&N4AAA;"); });
@@ -511,7 +519,7 @@ void loop()
 {
     MQTTLoop(); //will keep connect wifi and mqtt in this function
 
-    button.tick();
+    // button.tick();
 
     if (!flowStart && stream.avalible >= flowCache)
     {
