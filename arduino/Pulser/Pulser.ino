@@ -23,11 +23,10 @@
 const byte PixelLen = 20;
 const byte FrameRate = 17; // =1000ms/60fps
 const byte PinTouch = 12;
+const byte Sleep = 100;
 const char *AP_SSID = "Rolls_Pulser";
-const char *Name = "Roll_v1.1.04261733";
-const byte sleepRun = 1;
-const byte sleepIdle = 255; // > 300 is useless
-const byte sleepStandby = 100; // > 300 is useless
+const char *Name = "Roll_v1.1.04261820";
+
 
 // const char *MQTTServer = "";
 // const int   MQTTPort = 1883;
@@ -52,7 +51,6 @@ byte indicatorLightness = 10;
 byte indicatorPin = 10;
 bool indicatorToggleFlag = 0;
 
-byte sleep = sleepIdle;
 
 bool streamBeginFlag = 0;
 unsigned int streamCache = 1;
@@ -63,10 +61,10 @@ NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> heart(PixelLen);
 OneButton button(PinTouch, false, false);
 WiFiClient WLAN;
 WiFiManager WM;
-Ticker heartTicker;
 Ticker buttonTicker1;
 Ticker buttonTicker2;
 Ticker buttonTicker3;
+Ticker heartTicker;
 
 DataStream stream;
 Pixel pixels[PixelLen];
@@ -100,9 +98,6 @@ void detachs()
 ICACHE_RAM_ATTR void buttonTickIrq()
 {
     button.tick();
-    buttonTicker1.detach();
-    buttonTicker2.detach();
-    buttonTicker3.detach();
     buttonTicker1.once_ms(60, buttonTickTmr);
     buttonTicker2.once_ms(310, buttonTickTmr);
     buttonTicker3.once_ms(810, buttonTickTmr);
@@ -172,22 +167,6 @@ float getBattery()
     }
     float voltage = (adcs / 10) * 247.0f / 1024 / 47 - 0.19;
     return voltage;
-}
-
-byte parseHex(byte L)
-{
-    if ((L >= '0') && (L <= '9'))
-        return L - '0';
-    if ((L >= 'A') && (L <= 'F'))
-        return L + 10 - 'A';
-    if ((L >= 'a') && (L <= 'f'))
-        return L + 10 - 'a';
-    return -1;
-}
-
-byte parseHex(byte H, byte L)
-{
-    return parseHex(H) * 16 + parseHex(L);
 }
 
 void heartBegin()
@@ -391,7 +370,6 @@ void MQTTLoop()
 
 void MQTTMsg(String &topic, String &payload)
 {
-    // sleep = sleepStandby;
     if (payload.length() > 1 && payload[0] == ':')
     {
         switch (payload[1])
@@ -425,6 +403,22 @@ void MQTTMsg(String &topic, String &payload)
             break;
         }
     }
+}
+
+byte parseHex(byte L)
+{
+    if ((L >= '0') && (L <= '9'))
+        return L - '0';
+    if ((L >= 'A') && (L <= 'F'))
+        return L + 10 - 'A';
+    if ((L >= 'a') && (L <= 'f'))
+        return L + 10 - 'a';
+    return -1;
+}
+
+byte parseHex(byte H, byte L)
+{
+    return parseHex(H) * 16 + parseHex(L);
 }
 
 void streamBegin()
@@ -542,5 +536,5 @@ void loop()
 
     streamLoop();
 
-    delay(sleep);
+    delay(Sleep);
 }
