@@ -15,6 +15,7 @@ class Heart {
       ctx: null,
       fragmentation: 20,
       mqtt: null,
+      pubTopic: null,
     };
     this.setOptions(options);
     this.cursoredIds = [];
@@ -96,7 +97,7 @@ class Heart {
   streamEnd() {
     this.streamFrame = 0;
     if (this.options.mqtt) {
-      this.options.mqtt.publish("PB/D/R", this.stream);
+      this.options.mqtt.publish(this.options.pubTopic, this.stream);
       // console.log(this.stream);
     }
     this.stream = ":H";

@@ -40,16 +40,16 @@ var mqtt = null;
 var msgs = [""];
 var pub = 0;
 var pubButton = [
+  "pubButtonM",
   "pubButtonL",
   "pubButtonM",
   "pubButtonR",
-  "pubButtonM",
 ];
 var pubTopic = [
+  "PB/D/MR",
   "PB/D/M",
   "PB/D/MR",
   "PB/D/R",
-  "PB/D/MR",
 ];
 
 
@@ -122,7 +122,8 @@ function mqttConnect() {
   mqttOptions.clientId = 'wx_' + new Date().getMilliseconds();
   mqtt = MQTT.connect(MqttUrl, mqttOptions);
   heart.setOptions({
-    mqtt: mqtt
+    mqtt: mqtt,
+    pubTopic: pubTopic[pub]
   });
   mqttSubscribe();
 }
@@ -142,8 +143,8 @@ function mqttSubscribe() {
     }
   })
   mqtt.on('message', function (topic, message, packet) {
-    console.log(packet.payload.toString());
-    printMsg(packet.payload.toString());
+    console.log(topic.toString().substr(-1,1) + ': ' + message.toString());
+    printMsg(topic.toString().substr(-1,1) + ': ' + message.toString());
   })
 }
 
@@ -186,7 +187,9 @@ function pubChange() {
   page.setData({
       pubButton: pubButton[pub],
   })
-  pubTopic
+  heart.setOptions({
+    pubTopic: pubTopic[pub]
+  });
 }
 
 Page({
@@ -194,6 +197,7 @@ Page({
   data: {
     hueBlock: "red",
     huePressed: false,
+    pubButton: pubButton[pub]
   },
   heartTouchStart: heartTouchStart,
   heartTouchMove: heartTouchMove,

@@ -26,7 +26,7 @@ const byte PinTouch = 12;
 const byte Sleep = 100;
 const int MQTTPort = 1883;
 const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
-const char *Version = "v1.1.04272027";
+const char *Version = "v1.1.04272104";
 
 String Name;
 String MQTTUsername;
@@ -83,6 +83,14 @@ void PreDefines()
     }
     else
     {
+        Name = "Anonymous";
+        MQTTUsername = "";
+        MQTTPassword = "";
+        MQTTClientid = "";
+        MQTTPub = "";
+        MQTTSub[0] = "";
+        MQTTSub[1] = "";
+        BatteryOffset = 0;
     }
 }
 
@@ -215,6 +223,7 @@ void heartEnd()
     if (heartBeginFlag)
     {
         heartBeginFlag = 0;
+        heartClear();
         pinMode(3, INPUT);
     }
 }
@@ -441,16 +450,13 @@ byte parseHex(byte H, byte L)
 
 void streamBegin()
 {
-    streamBeginFlag = 1;
     heartBegin();
     heartTicker.attach_ms(FrameRate, heartTick);
 }
 
 void streamEnd()
 {
-    streamBeginFlag = 0;
     heartTicker.detach();
-    heartClear();
     heartEnd();
 }
 
