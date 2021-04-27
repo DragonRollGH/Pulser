@@ -31,7 +31,11 @@ public:
             else
             {
                 L -= deltaL;
-                if (L < 0) //<= or < ?
+                if (-0.0001 < L && L < 0.0001)
+                {
+                    L = 0;
+                }
+                if (L < 0)
                 {
                     active = false;
                 }

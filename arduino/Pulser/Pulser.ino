@@ -204,6 +204,7 @@ void heartBegin()
 
 void heartClear()
 {
+
     heartBegin();
     heart.ClearTo(RgbColor(0, 0, 0));
     heart.Show();
@@ -223,7 +224,6 @@ void heartEnd()
     if (heartBeginFlag)
     {
         heartBeginFlag = 0;
-        heartClear();
         pinMode(3, INPUT);
     }
 }
@@ -295,7 +295,7 @@ void heartSet()
         }
         else
         {
-            heart.SetPixelColor(i, RgbColor(0, 0, 0));
+            heart.SetPixelColor(i, HslColor(0, 0, 0));
         }
         pixels[i].update();
     }
@@ -314,9 +314,7 @@ void heartTick()
 void indicatorClear()
 {
     indicatorToggleFlag = false;
-    heartBegin();
-    heart.SetPixelColor(indicatorPin, RgbColor(0, 0, 0));
-    heart.Show();
+    heartClear(indicatorPin);
 }
 
 void indicatorSet(char c)
@@ -551,6 +549,7 @@ int WiFiPortal()
 
 void setup()
 {
+    Serial.begin(115200);
     PreDefines();
 
     WiFiInitialize();
