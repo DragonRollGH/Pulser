@@ -13,7 +13,7 @@
 #include <vector>
 #include <WiFiManager.h>
 #include <Wire.h>
-
+// 微信mqtt超时时间太长
 #include "DataStream.cpp"
 #include "Pixel.cpp"
 
@@ -24,19 +24,17 @@ const byte PixelLen = 20;
 const byte FrameRate = 17; // =1000ms/60fps
 const byte PinTouch = 12;
 const byte Sleep = 100;
-const char *AP_SSID = "Rolls_Pulser";
-const char *Name = "Roll_v1.1.04261820";
+const int MQTTPort = 1883;
+const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
+const char *Version = "v1.1.04272027";
 
-
-// const char *MQTTServer = "";
-// const int   MQTTPort = 1883;
-// const char *MQTTUsername = "";
-// const char *MQTTPassword = "";
-// const char *MQTTClientid = "";
-// const char *MQTTSub1 = "";
-// const char *MQTTSub2 = "";
-// const char *MQTTPub = "";
-
+String Name;
+String MQTTUsername;
+String MQTTPassword;
+String MQTTClientid;
+String MQTTPub;
+String MQTTSub[2];
+float BatteryOffset;
 
 //define in FS
 byte H = 0;
@@ -51,10 +49,8 @@ byte indicatorLightness = 10;
 byte indicatorPin = 10;
 bool indicatorToggleFlag = 0;
 
-
 bool streamBeginFlag = 0;
 unsigned int streamCache = 1;
-
 
 MQTTClient MQTT(512);
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> heart(PixelLen);
@@ -69,11 +65,26 @@ Ticker heartTicker;
 DataStream stream;
 Pixel pixels[PixelLen];
 
-struct WiFiEntry {
+struct WiFiEntry
+{
     String SSID;
     String PASS;
 };
 std::vector<WiFiEntry> WiFiList;
+
+void PreDefines()
+{
+    unsigned int ID = ESP.getChipId();
+    if (ID == 15406060)
+    {
+    }
+    else if (ID == 10409937)
+    {
+    }
+    else
+    {
+    }
+}
 
 void attachs()
 {
@@ -110,7 +121,7 @@ void buttonTickTmr()
 
 void cmdACK()
 {
-    MQTT.publish(MQTTPub, Name);
+    MQTT.publish(MQTTPub, Name + '_' + Version);
 }
 
 void cmdBattery()
@@ -137,6 +148,12 @@ void cmdHSL(String &payload)
     }
 }
 
+void cmdID()
+{
+    unsigned int ID = ESP.getChipId();
+    MQTT.publish(MQTTPub, String(ID));
+}
+
 void cmdPulse(String &payload) {}
 
 void cmdRGB(String &payload) {}
@@ -148,7 +165,6 @@ void cmdUpdate(String &paylaod)
     {
         url = paylaod.substring(2);
     }
-    // Serial.println("Starting update from " + url);
     MQTT.publish(MQTTPub, "Starting update from " + url);
 
     ESPhttpUpdate.setLedPin(LED_BUILTIN, LOW);
@@ -165,7 +181,7 @@ float getBattery()
         adcs += analogRead(A0);
         delay(10);
     }
-    float voltage = (adcs / 10) * 247.0f / 1024 / 47 - 0.19;
+    float voltage = (adcs / 10) * 247.0f / 1024 / 47 + BatteryOffset;
     return voltage;
 }
 
@@ -334,22 +350,21 @@ void indicatorToggle(char c)
 void MQTTConnect()
 {
     detachs();
-    indicatorClear();
     for (byte i = 0; i < 120; ++i)
     {
         WiFiConnect();
-        if (MQTT.connect(MQTTClientid, MQTTUsername, MQTTPassword))
+        if (MQTT.connect((MQTTClientid + millis()).c_str(), MQTTUsername.c_str(), MQTTPassword.c_str()))
         {
             break;
         }
         delay(500);
         indicatorToggle('g');
     }
-    MQTT.subscribe(MQTTSub1);
+    MQTT.subscribe(MQTTSub[0]);
     delay(10);
-    MQTT.subscribe(MQTTSub2);
+    MQTT.subscribe(MQTTSub[1]);
     cmdACK();
-    heartClear();
+    indicatorClear();
     attachs();
 }
 
@@ -388,6 +403,9 @@ void MQTTMsg(String &topic, String &payload)
             break;
         case 'H':
             cmdHSL(payload);
+            break;
+        case 'I':
+            cmdID();
             break;
         case 'P':
             cmdPulse(payload);
@@ -432,6 +450,7 @@ void streamEnd()
 {
     streamBeginFlag = 0;
     heartTicker.detach();
+    heartClear();
     heartEnd();
 }
 
@@ -511,9 +530,10 @@ int WiFiPortal()
 {
     indicatorSet('b');
     WM.setConfigPortalTimeout(10);
-    WM.startConfigPortal(AP_SSID);
+    WM.startConfigPortal((Name + "s_Pulser").c_str());
     if (WiFi.status() == WL_CONNECTED)
     {
+        indicatorClear();
         return 1;
     }
     else
@@ -525,8 +545,11 @@ int WiFiPortal()
 
 void setup()
 {
+    PreDefines();
+
     WiFiInitialize();
     MQTTInitialize();
+
     attachs();
 }
 
