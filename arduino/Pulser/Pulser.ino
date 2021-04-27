@@ -26,7 +26,7 @@ const byte PinTouch = 12;
 const byte Sleep = 100;
 const int MQTTPort = 1883;
 const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
-const char *Version = "v1.1.04272104";
+const char *Version = "v1.1.04272252";
 
 String Name;
 String MQTTUsername;
