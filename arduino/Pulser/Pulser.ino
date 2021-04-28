@@ -471,6 +471,17 @@ void WiFiAdd(String SSID, String PASS)
     WiFiList.push_back(WiFiEntry{SSID, PASS});
 }
 
+void WiFiConfigNew()
+{
+    LittleFS.begin();
+    StaticJsonDocument<128> doc;
+    doc["len"] = 0;
+    File WiFiConfig = LittleFS.open("/WiFi.json", "w");
+    serializeJson(doc, WiFiConfig);
+    WiFiConfig.close();
+    LittleFS.end();
+}
+
 void WiFiConfigRead()
 {
     LittleFS.begin();
@@ -495,17 +506,6 @@ void WiFiConfigRead()
     }
     LittleFS.end();
 
-}
-
-void WiFiConfigNew()
-{
-    LittleFS.begin();
-    StaticJsonDocument<128> doc;
-    doc["len"] = 0;
-    File WiFiConfig = LittleFS.open("/WiFi.json", "w");
-    serializeJson(doc, WiFiConfig);
-    WiFiConfig.close();
-    LittleFS.end();
 }
 
 void WiFiConfigWrite(String SSID, String PASS)
