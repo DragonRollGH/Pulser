@@ -26,7 +26,7 @@ const byte PinTouch = 12;
 const byte Sleep = 100;
 const int MQTTPort = 1883;
 const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
-const char *Version = "v1.1.04272252";
+const char *Version = "v1.2.04282130";
 
 String Name;
 String MQTTUsername;
@@ -406,7 +406,7 @@ void MQTTMsg(String &topic, String &payload)
             cmdDefault(payload);
             break;
         case 'F':
-            cmdFile(payload);
+            WiFiConfigNew();
             break;
         case 'H':
             cmdHSL(payload);
@@ -471,6 +471,76 @@ void WiFiAdd(String SSID, String PASS)
     WiFiList.push_back(WiFiEntry{SSID, PASS});
 }
 
+void WiFiConfigRead()
+{
+    LittleFS.begin();
+    if (LittleFS.exists("/WiFi.json"))
+    {
+        StaticJsonDocument<512> doc;
+        File WiFiConfig = LittleFS.open("/WiFi.json", "r");
+        deserializeJson(doc, WiFiConfig);
+        for (byte i = 0; i < doc["len"]; ++i)
+        {
+            WiFiAdd(doc["ssid"][i], doc["pass"][i]);
+        }
+        WiFiConfig.close();
+    }
+    else
+    {
+        StaticJsonDocument<128> doc;
+        doc["len"] = 0;
+        File WiFiConfig = LittleFS.open("/WiFi.json", "w");
+        serializeJson(doc, WiFiConfig);
+        WiFiConfig.close();
+    }
+    LittleFS.end();
+
+}
+
+void WiFiConfigNew()
+{
+    LittleFS.begin();
+    StaticJsonDocument<128> doc;
+    doc["len"] = 0;
+    File WiFiConfig = LittleFS.open("/WiFi.json", "w");
+    serializeJson(doc, WiFiConfig);
+    WiFiConfig.close();
+    LittleFS.end();
+}
+
+void WiFiConfigWrite(String SSID, String PASS)
+{
+    LittleFS.begin();
+    File WiFiConfig = LittleFS.open("/WiFi.json", "r");
+    StaticJsonDocument<512> doc;
+    deserializeJson(doc, WiFiConfig);
+    WiFiConfig.close();
+    byte len = doc["len"];
+    bool exist = 0;
+    for (byte i = 0; i < len; ++i)
+    {
+        if (doc["ssid"][i] == SSID)
+        {
+            exist = 1;
+            if (doc["pass"][i] != PASS)
+            {
+                doc["pass"][i] = PASS;
+            }
+        }
+    }
+    if (!exist)
+    {
+        ++len;
+        doc["len"] = len;
+        doc["ssid"].add(SSID);
+        doc["pass"].add(PASS);
+    }
+    WiFiConfig = LittleFS.open("/WiFi.json", "w");
+    serializeJson(doc, WiFiConfig);
+    WiFiConfig.close();
+    LittleFS.end();
+}
+
 int WiFiConnect()
 {
     if (WiFi.status() != WL_CONNECTED)
@@ -526,17 +596,18 @@ void WiFiInitialize()
 {
     WiFi.mode(WIFI_STA);
     WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
-    WiFiAdd("iTongji-manul", "YOUYUAN4411");
-    WiFiAdd("DragonRoll", "1234567890");
+    WiFiConfigRead();
 }
 
 int WiFiPortal()
 {
     indicatorSet('b');
-    WM.setConfigPortalTimeout(10);
+    WM.setConfigPortalTimeout(180);
     WM.startConfigPortal((Name + "s_Pulser").c_str());
     if (WiFi.status() == WL_CONNECTED)
     {
+        WiFiConfigWrite(WM.getWiFiSSID(), WM.getWiFiPass());
+        WiFiAdd(WM.getWiFiSSID(), WM.getWiFiPass());
         indicatorClear();
         return 1;
     }
@@ -549,7 +620,6 @@ int WiFiPortal()
 
 void setup()
 {
-    Serial.begin(115200);
     PreDefines();
 
     WiFiInitialize();
