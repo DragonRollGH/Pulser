@@ -158,7 +158,7 @@ function onlineCheck(topic) {
   if (!onlineL && topic == 'PB/U/M') {
     onlineSet('M');
   } else if (!onlineR && topic == 'PB/U/R') {
-    onLineSet('R');
+    onlineSet('R');
   }
 }
 
