@@ -13,7 +13,6 @@
 #include <vector>
 #include <WiFiManager.h>
 #include <Wire.h>
-// 微信mqtt超时时间太长
 #include "DataStream.cpp"
 #include "Pixel.cpp"
 
@@ -77,9 +76,17 @@ void PreDefines()
     unsigned int ID = ESP.getChipId();
     if (ID == 15406060)
     {
+        MQTTPub = "PB/U/M";
+        MQTTSub[0] = "PB/D/M";
+        MQTTSub[1] = "PB/D/MR";
+        BatteryOffset = -0.03;
     }
     else if (ID == 10409937)
     {
+        MQTTPub = "PB/U/R";
+        MQTTSub[0] = "PB/D/R";
+        MQTTSub[1] = "PB/D/MR";
+        BatteryOffset = -0.19;
     }
     else
     {
