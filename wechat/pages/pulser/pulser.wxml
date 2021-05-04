@@ -7,8 +7,8 @@
         </view>
       </view>
       <view class="center">
-        <text class="pubUserL pubUserOff">M</text>
-        <text class="pubUserR pubUserOn">R</text>
+        <text class="pubUserL {{pubUserL}}">M</text>
+        <text class="pubUserR {{pubUserR}}">R</text>
       </view>
     </view>
   </view>

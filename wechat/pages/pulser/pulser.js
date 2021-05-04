@@ -31,7 +31,7 @@ var heart = new Heart(PixelPositions, PixelRadius, heartOptions);
 
 const MqttUrl = "wxs://ajdnaud.iot.gz.baidubce.com/mqtt";
 var mqttOptions = {
-  connectTimeout: 5000, //超时时间
+  connectTimeout: 3000, //超时时间
   clientId: 'wx_' + new Date().getMilliseconds(),
   username: "thingidp@ajdnaud|PB_JS_1",
   password: "31926a99217eb5796fdd4794d684b0dc"
@@ -40,17 +40,19 @@ var mqtt = null;
 var msgs = [""];
 var pub = 0;
 var pubButton = [
+  "pubButtonR",
   "pubButtonM",
   "pubButtonL",
   "pubButtonM",
-  "pubButtonR",
 ];
 var pubTopic = [
+  "PB/D/R",
   "PB/D/MR",
   "PB/D/M",
   "PB/D/MR",
-  "PB/D/R",
 ];
+var onlineL = false;
+var onlineR = false;
 
 
 function animate() {
@@ -131,6 +133,7 @@ function mqttConnect() {
 function mqttSubscribe() {
   mqtt.on('connect', (e) => {
     console.log('成功连接服务器!');
+    mqtt.publish(pubTopic[0], ':A');
   })
   mqtt.subscribe('PB/U/M', (err) => {
     if (!err) {
@@ -142,28 +145,58 @@ function mqttSubscribe() {
       console.log("订阅成功: PB/U/R");
     }
   })
-  mqtt.on('message', function (topic, message, packet) {
-    console.log(topic.toString().substr(-1,1) + ': ' + message.toString());
-    printMsg(topic.toString().substr(-1,1) + ': ' + message.toString());
-  })
+  mqtt.on('message', mqttMsg);
+}
+
+function mqttMsg(topic, message, packet) {
+  console.log(topic.toString() + ': ' + message.toString());
+  printMsg(topic.toString().substr(-1,1) + ': ' + message.toString());
+  onlineCheck(topic);
+}
+
+function onlineCheck(topic) {
+  if (!onlineL && topic == 'PB/U/M') {
+    onlineSet('M');
+  } else if (!onlineR && topic == 'PB/U/R') {
+    onLineSet('R');
+  }
+}
+
+function onlineSet(who) {
+  if (who == 'MR') {
+    page.setData({
+      pubUserL: 'pubUserOn',
+      pubUserR: 'pubUserOn',
+    });
+  } else if (who == "M") {
+    page.setData({
+      pubUserL: 'pubUserOn',
+    });
+  } else if (who == "R") {
+    page.setData({
+      pubUserR: 'pubUserOn',
+    });
+  }
 }
 
 function onHide() {
   mqtt.end();
-  console.log('mqtt.end();');
+  page.setData({
+    pubUserL: 'pubUserOff',
+    pubUserR: 'pubUserOff',
+  });
 }
 
-function onLoad() {
+function onLoad(event) {
   wx.hideHomeButton();
   page = this;
+  pub = event.user*2;
+  page.setData({
+    pubButton: pubButton[pub],
+  });
   setInterval(animate, 17);
   animate();
-}
-
-
-function onPullDownRefresh() {
-  onHide();
-  onShow();
+  console.log(event)
 }
 
 function onShow() {
@@ -195,9 +228,10 @@ function pubChange() {
 Page({
   cmdSend: cmdSend,
   data: {
-    hueBlock: "red",
+    hueBlock: 'red',
     huePressed: false,
-    pubButton: pubButton[pub]
+    pubUserL: 'pubUserOff',
+    pubUserR: 'pubUserOff',
   },
   heartTouchStart: heartTouchStart,
   heartTouchMove: heartTouchMove,
@@ -209,7 +243,6 @@ Page({
   lightnessChange: lightnessChange,
   onHide: onHide,
   onLoad: onLoad,
-  onPullDownRefresh: onPullDownRefresh,
   onShow: onShow,
   preventDefault: () => {},
   pubChange: pubChange,
