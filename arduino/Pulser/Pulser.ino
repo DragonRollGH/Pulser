@@ -25,7 +25,7 @@ const byte PinTouch = 12;
 const byte Sleep = 100;
 const int MQTTPort = 1883;
 const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
-const char *Version = "v1.2.05042008";
+const char *Version = "v1.3.05042039";
 
 String Name;
 String MQTTUsername;
@@ -129,6 +129,40 @@ ICACHE_RAM_ATTR void buttonTickIrq()
     buttonTicker3.once_ms(810, buttonTickTmr);
 }
 
+byte batteryGet()
+{
+    unsigned int adcs = 0;
+    for (byte i = 0; i < 10; i++)
+    {
+        adcs += analogRead(A0);
+        delay(10);
+    }
+    float voltage = (adcs / 10) * 247.0f / 1024 / 47 + BatteryOffset;
+    byte percent = (voltage - 3.2) * 100;
+    if (percent > 150)
+    {
+        percent = 0;
+    }
+    else if (percent > 100)
+    {
+        percent = 100;
+    }
+    return percent;
+}
+
+void batteryInitialize()
+{
+    byte battery = batteryGet();
+    heartBegin();
+    heart.SetPixelColor(0, HslColor(battery / 300.0f, 1, indicatorLightness / 510.0f));
+    if (battery == 0)
+    {
+        delay(5);
+        heartClear();
+        ESP.deepSleepInstant(INT32_MAX);
+    }
+}
+
 void buttonTickTmr()
 {
     button.tick();
@@ -141,7 +175,7 @@ void cmdACK()
 
 void cmdBattery()
 {
-    MQTT.publish(MQTTPub, String(getBattery()) + '%');
+    MQTT.publish(MQTTPub, String(batteryGet()) + '%');
 }
 
 void cmdDefault(String &payload) {}
@@ -186,27 +220,6 @@ void cmdUpdate(String &paylaod)
     ESPhttpUpdate.onStart([] { MQTT.publish(MQTTPub, "[httpUpdate] Started"); });
     ESPhttpUpdate.onError([](int err) { MQTT.publish(MQTTPub, String("[httpUpdate] Error: ") + ESPhttpUpdate.getLastErrorString().c_str()); });
     ESPhttpUpdate.update(url);
-}
-
-byte getBattery()
-{
-    unsigned int adcs = 0;
-    for (byte i = 0; i < 10; i++)
-    {
-        adcs += analogRead(A0);
-        delay(10);
-    }
-    float voltage = (adcs / 10) * 247.0f / 1024 / 47 + BatteryOffset;
-    byte percent = (voltage - 3.2) * 100;
-    if (percent > 150)
-    {
-        percent = 0;
-    }
-    else if (percent > 100)
-    {
-        percent = 100;
-    }
-    return percent;
 }
 
 void heartBegin()
@@ -387,7 +400,7 @@ void MQTTConnect()
     delay(10);
     MQTT.subscribe(MQTTSub[1]);
     cmdACK();
-    indicatorClear();
+    heartClear();
     attachs();
 }
 
@@ -638,6 +651,7 @@ void setup()
 {
     PreDefines();
 
+    batteryInitialize();
     WiFiInitialize();
     MQTTInitialize();
 
