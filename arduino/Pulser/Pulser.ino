@@ -25,7 +25,7 @@ const byte PinTouch = 12;
 const byte Sleep = 100;
 const int MQTTPort = 1883;
 const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
-const char *Version = "v1.2.04282130";
+const char *Version = "v1.2.05042008";
 
 String Name;
 String MQTTUsername;
@@ -38,13 +38,13 @@ float BatteryOffset;
 //define in FS
 byte H = 0;
 byte S = 255;
-byte L = 50;
+byte L = 20;
 byte A = 5;
 byte B = 35;
 
 bool heartBeginFlag = 0;
 
-byte indicatorLightness = 10;
+byte indicatorLightness = 20;
 byte indicatorPin = 10;
 bool indicatorToggleFlag = 0;
 
@@ -141,7 +141,7 @@ void cmdACK()
 
 void cmdBattery()
 {
-    MQTT.publish(MQTTPub, String(getBattery()));
+    MQTT.publish(MQTTPub, String(getBattery()) + '%');
 }
 
 void cmdDefault(String &payload) {}
@@ -188,7 +188,7 @@ void cmdUpdate(String &paylaod)
     ESPhttpUpdate.update(url);
 }
 
-float getBattery()
+byte getBattery()
 {
     unsigned int adcs = 0;
     for (byte i = 0; i < 10; i++)
@@ -197,7 +197,16 @@ float getBattery()
         delay(10);
     }
     float voltage = (adcs / 10) * 247.0f / 1024 / 47 + BatteryOffset;
-    return voltage;
+    byte percent = (voltage - 3.2) * 100;
+    if (percent > 150)
+    {
+        percent = 0;
+    }
+    else if (percent > 100)
+    {
+        percent = 100;
+    }
+    return percent;
 }
 
 void heartBegin()
