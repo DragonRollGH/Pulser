@@ -8,10 +8,11 @@ public:
     unsigned int ri = 0;
     unsigned int avalible = 0;
     byte stream[buf];
+    bool power = 1;
 
     void write(byte w)
     {
-        if (avalible <= buf)
+        if (power && avalible <= buf)
         {
             stream[wi] = w;
             wi = (wi + 1) % buf;
@@ -45,5 +46,21 @@ public:
     {
         wi = (wi + buf - ui) % buf;
         avalible -= ui;
+    }
+
+    void flush()
+    {
+        avalible = 0;
+        ri = wi;
+    }
+
+    void open()
+    {
+        power = 1;
+    }
+
+    void close()
+    {
+        power = 0;
     }
 };
