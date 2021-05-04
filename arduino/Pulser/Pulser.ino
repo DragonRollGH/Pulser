@@ -25,7 +25,7 @@ const byte PinTouch = 12;
 const byte Sleep = 100;
 const int MQTTPort = 1883;
 const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
-const char *Version = "v1.3.05042249";
+const char *Version = "v1.3.05050021";
 
 String Name;
 String MQTTUsername;
@@ -159,18 +159,6 @@ ICACHE_RAM_ATTR void buttonTickIrq()
 //     delay(2000);
 //     heartClear();
 //     attachs();
-// }
-// void battryAnimation()
-// {   can't be used in irq or ticker too
-//     byte battery = batteryGet();
-//     battery = battery * PixelLen / 100;
-//     heartBegin();
-//     for (byte i = 0; i < battery; ++i)
-//     {
-//         heart.SetPixelColor(i, HslColor(i / PixelLen * 3.0f, 1, L / 255.0f));
-//     }
-//     heart.Show();
-//     ticker.once(2, []() { heartClear(); });
 // }
 
 byte batteryGet()
