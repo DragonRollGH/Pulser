@@ -133,7 +133,7 @@ function mqttConnect() {
 function mqttSubscribe() {
   mqtt.on('connect', (e) => {
     console.log('成功连接服务器!');
-    mqtt.publish(pubTopic[0], ':A');
+    mqtt.publish(pubTopic[1], ':A');
   })
   mqtt.subscribe('PB/U/M', (err) => {
     if (!err) {
@@ -196,7 +196,6 @@ function onLoad(event) {
   });
   setInterval(animate, 17);
   animate();
-  console.log(event)
 }
 
 function onShow() {
@@ -232,6 +231,7 @@ Page({
     huePressed: false,
     pubUserL: 'pubUserOff',
     pubUserR: 'pubUserOff',
+    pubButton: pubButton[1]
   },
   heartTouchStart: heartTouchStart,
   heartTouchMove: heartTouchMove,
