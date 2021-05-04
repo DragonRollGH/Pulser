@@ -25,7 +25,7 @@ const byte PinTouch = 12;
 const byte Sleep = 100;
 const int MQTTPort = 1883;
 const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
-const char *Version = "v1.3.05042039";
+const char *Version = "v1.3.05042249";
 
 String Name;
 String MQTTUsername;
@@ -60,6 +60,7 @@ Ticker buttonTicker1;
 Ticker buttonTicker2;
 Ticker buttonTicker3;
 Ticker heartTicker;
+// Ticker ticker;
 
 DataStream stream;
 Pixel pixels[PixelLen];
@@ -103,10 +104,11 @@ void PreDefines()
 
 void attachs()
 {
+    streamOpen();
     attachInterrupt(digitalPinToInterrupt(PinTouch), buttonTickIrq, CHANGE);
     button.attachClick([]() { stream.write("&NgAAA;"); });
-    button.attachDoubleClick([]() { stream.write("&NwAAA;"); });
-    button.attachMultiClick([]() { stream.write("&N4AAA;"); });
+    // button.attachDoubleClick(battryAnimation);
+    // button.attachMultiClick([]() { stream.write("&N4AAA;"); });
     button.attachLongPressStart([]() { stream.write("&N8AAA;"); });
     button.attachLongPressStop([]() { stream.write("&N+AAA;"); });
 }
@@ -114,6 +116,7 @@ void attachs()
 void detachs()
 {
     streamEnd();
+    streamClose();
     button.reset();
     detachInterrupt(digitalPinToInterrupt(PinTouch));
     buttonTicker1.detach();
@@ -128,6 +131,47 @@ ICACHE_RAM_ATTR void buttonTickIrq()
     buttonTicker2.once_ms(310, buttonTickTmr);
     buttonTicker3.once_ms(810, buttonTickTmr);
 }
+
+// void battryAnimation()
+// {   // contain delay, can't be used in irq or ticker.
+//     detachs();
+//     heartBegin();
+//     for (byte i = 0; i < PixelLen; ++i)
+//     {
+//         heart.SetPixelColor(i, HslColor(i / PixelLen * 3.0f, 1, L / 255.0f));
+//     }
+//     heart.Show();
+//     byte battery = batteryGet();
+//     delay(400);
+//     battery = battery * (PixelLen - 1) / 100;
+//     for (byte i = PixelLen - 1; i > battery; --i)
+//     {
+//         heartClear(i);
+//         heart.Show();
+//         delay(500 / battery);
+//     }
+//     if (battery == 0)
+//     {
+//         delay(5000);
+//         heartClear();
+//         ESP.deepSleepInstant(INT32_MAX);
+//     }
+//     delay(2000);
+//     heartClear();
+//     attachs();
+// }
+// void battryAnimation()
+// {   can't be used in irq or ticker too
+//     byte battery = batteryGet();
+//     battery = battery * PixelLen / 100;
+//     heartBegin();
+//     for (byte i = 0; i < battery; ++i)
+//     {
+//         heart.SetPixelColor(i, HslColor(i / PixelLen * 3.0f, 1, L / 255.0f));
+//     }
+//     heart.Show();
+//     ticker.once(2, []() { heartClear(); });
+// }
 
 byte batteryGet()
 {
@@ -155,9 +199,10 @@ void batteryInitialize()
     byte battery = batteryGet();
     heartBegin();
     heart.SetPixelColor(0, HslColor(battery / 300.0f, 1, indicatorLightness / 510.0f));
+    heart.Show();
     if (battery == 0)
     {
-        delay(5);
+        delay(5000);
         heartClear();
         ESP.deepSleepInstant(INT32_MAX);
     }
@@ -237,6 +282,7 @@ void heartClear()
     heartBegin();
     heart.ClearTo(RgbColor(0, 0, 0));
     heart.Show();
+    // heartEnd(); bad choice
 }
 
 void heartClear(byte i)
@@ -402,6 +448,8 @@ void MQTTConnect()
     cmdACK();
     heartClear();
     attachs();
+    delay(10);
+    heartEnd();
 }
 
 void MQTTInitialize()
@@ -481,6 +529,12 @@ void streamBegin()
     heartTicker.attach_ms(FrameRate, heartTick);
 }
 
+void streamClose()
+{
+    stream.flush();
+    stream.close();
+}
+
 void streamEnd()
 {
     heartTicker.detach();
@@ -493,6 +547,11 @@ void streamLoop()
     {
         streamBegin();
     }
+}
+
+void streamOpen()
+{
+    stream.open();
 }
 
 void WiFiAdd(String SSID, String PASS)
