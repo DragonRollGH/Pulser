@@ -10,7 +10,7 @@ public:
     byte stream[buf];
     bool power = 1;
 
-    void write(byte w)
+    void write(char w)
     {
         if (power && avalible <= buf)
         {

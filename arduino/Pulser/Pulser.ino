@@ -22,10 +22,10 @@
 const byte PixelLen = 20;
 const byte FrameRate = 17; // =1000ms/60fps
 const byte PinTouch = 12;
-const byte Sleep = 100;
+const byte Sleep = 200;
 const int MQTTPort = 1883;
 const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
-const char *Version = "v1.3.05050021";
+const char *Version = "v1.4.05051446";
 
 String Name;
 String MQTTUsername;
@@ -47,6 +47,8 @@ bool heartBeginFlag = 0;
 byte indicatorLightness = 20;
 byte indicatorPin = 10;
 bool indicatorToggleFlag = 0;
+
+bool menuBeginFlag = 0;
 
 bool streamBeginFlag = 0;
 unsigned int streamCache = 1;
@@ -107,7 +109,7 @@ void attachs()
     streamOpen();
     attachInterrupt(digitalPinToInterrupt(PinTouch), buttonTickIrq, CHANGE);
     button.attachClick([]() { stream.write("&NgAAA;"); });
-    // button.attachDoubleClick(battryAnimation);
+    button.attachDoubleClick([]() { menuBeginFlag = 1; });
     // button.attachMultiClick([]() { stream.write("&N4AAA;"); });
     button.attachLongPressStart([]() { stream.write("&N8AAA;"); });
     button.attachLongPressStop([]() { stream.write("&N+AAA;"); });
@@ -132,34 +134,34 @@ ICACHE_RAM_ATTR void buttonTickIrq()
     buttonTicker3.once_ms(810, buttonTickTmr);
 }
 
-// void battryAnimation()
-// {   // contain delay, can't be used in irq or ticker.
-//     detachs();
-//     heartBegin();
-//     for (byte i = 0; i < PixelLen; ++i)
-//     {
-//         heart.SetPixelColor(i, HslColor(i / PixelLen * 3.0f, 1, L / 255.0f));
-//     }
-//     heart.Show();
-//     byte battery = batteryGet();
-//     delay(400);
-//     battery = battery * (PixelLen - 1) / 100;
-//     for (byte i = PixelLen - 1; i > battery; --i)
-//     {
-//         heartClear(i);
-//         heart.Show();
-//         delay(500 / battery);
-//     }
-//     if (battery == 0)
-//     {
-//         delay(5000);
-//         heartClear();
-//         ESP.deepSleepInstant(INT32_MAX);
-//     }
-//     delay(2000);
-//     heartClear();
-//     attachs();
-// }
+void battryAnimation()
+{
+    heartClear();
+    detachs();
+    heartBegin();
+    for (byte i = 0; i < PixelLen; ++i)
+    {
+        heart.SetPixelColor(i, HslColor(i / (PixelLen * 3.0f), 1, indicatorLightness / 510.0f));
+    }
+    heart.Show();
+    byte battery = batteryGet();
+    battery = battery * PixelLen / 100;
+    for (byte i = PixelLen - 1; i >= battery; --i)
+    {
+        heartClear(i);
+        heart.Show();
+        delay(1000 / battery);
+    }
+    if (battery == 0)
+    {
+        delay(5000);
+        heartClear();
+        ESP.deepSleepInstant(INT32_MAX);
+    }
+    delay(3000);
+    heartClear();
+    attachs();
+}
 
 byte batteryGet()
 {
@@ -242,7 +244,7 @@ void cmdRGB(String &payload) {}
 
 void cmdUpdate(String &paylaod)
 {
-    String url = "http://192.168.1.110:5500/arduino/Pulser/Pulser.ino.generic.bin";
+    String url = "http://tj.dragonroll.cn:5500/arduino/Pulser/Pulser.ino.generic.bin";
     if (paylaod.length() > 2)
     {
         url = paylaod.substring(2);
@@ -266,11 +268,10 @@ void heartBegin()
 
 void heartClear()
 {
-
     heartBegin();
     heart.ClearTo(RgbColor(0, 0, 0));
     heart.Show();
-    // heartEnd(); bad choice
+    // heartEnd(); need delay > 1 after show()
 }
 
 void heartClear(byte i)
@@ -417,8 +418,18 @@ void indicatorToggle(char c)
     }
 }
 
+void menuLoop()
+{
+    if (menuBeginFlag)
+    {
+        menuBeginFlag = 0;
+        battryAnimation();
+    }
+}
+
 void MQTTConnect()
 {
+    // heartClear(); cause to turn off battert indicator.
     detachs();
     for (byte i = 0; i < 120; ++i)
     {
@@ -581,7 +592,6 @@ void WiFiConfigRead()
         WiFiConfig.close();
     }
     LittleFS.end();
-
 }
 
 void WiFiConfigWrite(String SSID, String PASS)
@@ -710,6 +720,8 @@ void loop()
     MQTTLoop(); //will keep connect wifi and mqtt in this function
 
     streamLoop();
+
+    menuLoop();
 
     delay(Sleep);
 }
