@@ -25,7 +25,7 @@ const byte PinTouch = 12;
 const byte Sleep = 200;
 const int MQTTPort = 1883;
 const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
-const char *Version = "v1.4.05051446";
+const char *Version = "v1.4.05051451";
 
 String Name;
 String MQTTUsername;
@@ -83,6 +83,7 @@ void PreDefines()
         MQTTSub[0] = "PB/D/M";
         MQTTSub[1] = "PB/D/MR";
         BatteryOffset = -0.03;
+        Sleep = 200;
     }
     else if (ID == 10409937)
     {
@@ -90,6 +91,7 @@ void PreDefines()
         MQTTSub[0] = "PB/D/R";
         MQTTSub[1] = "PB/D/MR";
         BatteryOffset = -0.19;
+        Sleep = 100;
     }
     else
     {
