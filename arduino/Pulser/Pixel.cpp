@@ -1,5 +1,14 @@
 #include <Arduino.h>
 
+struct PixelColor
+{
+    byte H;
+    byte S;
+    byte L;
+    byte A;
+    byte B;
+};
+
 class Pixel
 {
 public:
@@ -10,15 +19,24 @@ public:
     float deltaL;
     byte A;
 
-    void run(byte rH, byte rS, byte rL, byte rA, byte rB)
+    void run(PixelColor &color)
     {
         active = true;
-        H = rH / 255.0f;
-        S = rS / 255.0f;
-        L = rL / 255.0f;
-        A = rA;
-        deltaL = L / rB;
+        H = color.H / 255.0f;
+        S = color.S / 255.0f;
+        L = color.L / 255.0f;
+        A = color.A;
+        deltaL = L / color.B;
     }
+    // void run(byte rH, byte rS, byte rL, byte rA, byte rB)
+    // {
+    //     active = true;
+    //     H = rH / 255.0f;
+    //     S = rS / 255.0f;
+    //     L = rL / 255.0f;
+    //     A = rA;
+    //     deltaL = L / rB;
+    // }
 
     void update(void)
     {

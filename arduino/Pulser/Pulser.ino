@@ -22,7 +22,7 @@
 const byte PixelLen = 20;
 const byte FrameRate = 17; // =1000ms/60fps
 const byte PinTouch = 12;
-const byte Sleep = 200;
+byte Sleep = 200;
 const int MQTTPort = 1883;
 const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
 const char *Version = "v1.4.05051451";
@@ -36,11 +36,11 @@ String MQTTSub[2];
 float BatteryOffset;
 
 //define in FS
-byte H = 0;
-byte S = 255;
-byte L = 20;
-byte A = 5;
-byte B = 35;
+// byte H = 0;
+// byte S = 255;
+// byte L = 20;
+// byte A = 5;
+// byte B = 35;
 
 bool heartBeginFlag = 0;
 
@@ -66,6 +66,8 @@ Ticker heartTicker;
 
 DataStream stream;
 Pixel pixels[PixelLen];
+PixelColor colors[2] = {{0, 255, 20, 5, 35}, {120, 255, 20, 5, 35}};
+bool colorsIdx = 0;
 
 struct WiFiEntry
 {
@@ -110,7 +112,7 @@ void attachs()
 {
     streamOpen();
     attachInterrupt(digitalPinToInterrupt(PinTouch), buttonTickIrq, CHANGE);
-    button.attachClick([]() { stream.write("&NgAAA;"); });
+    button.attachClick([]() { stream.write("&C&NgAAA;&C;"); });
     button.attachDoubleClick([]() { menuBeginFlag = 1; });
     // button.attachMultiClick([]() { stream.write("&N4AAA;"); });
     button.attachLongPressStart([]() { stream.write("&N8AAA;"); });
@@ -283,7 +285,10 @@ void heartClear(byte i)
     heart.Show();
 }
 
-void heartDefult() {}
+void heartColorsToggle()
+{
+    colorsIdx = !colorsIdx;
+}
 
 void heartEnd()
 {
@@ -303,7 +308,7 @@ void heartRun(byte b1, byte b2, byte b3, byte b4)
     {
         if (arry[i / 8] & (byte)128)
         {
-            pixels[i].run(H, S, L, A, B);
+            pixels[i].run(colors[colorsIdx]);
         }
         arry[i / 8] <<= 1;
     }
@@ -319,23 +324,23 @@ void heartSet()
         case '&':
             switch (stream.read())
             {
-            case 'D':
-                heartDefult();
-                break;
             case 'H':
-                H = parseHex(stream.read(), stream.read());
+                colors[colorsIdx].H = parseHex(stream.read(), stream.read());
                 break;
             case 'S':
-                S = parseHex(stream.read(), stream.read());
+                colors[colorsIdx].S = parseHex(stream.read(), stream.read());
                 break;
             case 'L':
-                L = parseHex(stream.read(), stream.read());
+                colors[colorsIdx].L = parseHex(stream.read(), stream.read());
                 break;
             case 'A':
-                A = parseHex(stream.read(), stream.read());
+                colors[colorsIdx].A = parseHex(stream.read(), stream.read());
                 break;
             case 'B':
-                B = parseHex(stream.read(), stream.read());
+                colors[colorsIdx].B = parseHex(stream.read(), stream.read());
+                break;
+            case 'C':
+                heartColorsToggle();
                 break;
             case 'N':
                 heartRun(stream.read(), stream.read(), stream.read(), stream.read());
