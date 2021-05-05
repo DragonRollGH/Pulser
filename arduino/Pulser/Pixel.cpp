@@ -6,7 +6,7 @@ struct PixelColor
     byte S;
     byte L;
     byte A;
-    byte B;
+    int B;
 };
 
 class Pixel
@@ -26,17 +26,14 @@ public:
         S = color.S / 255.0f;
         L = color.L / 255.0f;
         A = color.A;
-        deltaL = L / color.B;
+        if (color.B > 0)
+        {
+            deltaL = L / color.B;
+        }
+        else{
+            deltaL = (0.125 - L) / color.B;
+        }
     }
-    // void run(byte rH, byte rS, byte rL, byte rA, byte rB)
-    // {
-    //     active = true;
-    //     H = rH / 255.0f;
-    //     S = rS / 255.0f;
-    //     L = rL / 255.0f;
-    //     A = rA;
-    //     deltaL = L / rB;
-    // }
 
     void update(void)
     {
@@ -52,6 +49,11 @@ public:
                 if (-0.0001 < L && L < 0.0001)
                 {
                     L = 0;
+                }
+                else if (L > 0.5)
+                {
+                    L = 0;
+                    deltaL = 1;
                 }
                 if (L < 0)
                 {

@@ -25,7 +25,16 @@ const byte PinTouch = 12;
 byte Sleep = 200;
 const int MQTTPort = 1883;
 const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
-const char *Version = "v1.4.05051451";
+const char *Version = "v1.5.05060044";
+//const String Pulse1 = "&C&A00&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&C;";
+
+//const String Pulse2 = "&C&A00&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&C;";
+
+//const String Pulse3 = "&C&A00&b80&L00&N////;;;;;;;;&b08&L02&N////;;;;;;&b80&L1a&N////;;;;;;;;&B54&L1c&N////;;;;;;&B0b&L1a&N////;;;;;;;;;;&B02&L01&N////;;&b80&L00&N////;;;;;;;;&b08&L02&N////;;;;;;&b80&L1a&N////;;;;;;;;&B54&L1c&N////;;;;;;&B0b&L1a&N////;;;;;;;;;;&B02&L01&N////;;&b80&L00&N////;;;;;;;;&b08&L02&N////;;;;;;&b80&L1a&N////;;;;;;;;&B54&L1c&N////;;;;;;&B0b&L1a&N////;;;;;;;;;;&B02&L01&N////;;&b80&L00&N////;;;;;;;;&b08&L02&N////;;;;;;&b80&L1a&N////;;;;;;;;&B54&L1c&N////;;;;;;&B0b&L1a&N////;;;;;;;;;;&B02&L01&N////;;&C;";
+
+const String Pulse = "&C&A00&bff&L00&N////;;;;;;;;;;;;;;;;&b0e&L02&N////;;;;;;;;&b18&L15&N////;;;;&B0c&L18&N////;;;;;;;;;;;;&bff&L00&N////;;;;;;;;;;;;;;;;&b0e&L02&N////;;;;;;;;&b18&L15&N////;;;;&B0c&L18&N////;;;;;;;;;;;;&bff&L00&N////;;;;;;;;;;;;;;;;&b0e&L02&N////;;;;;;;;&b18&L15&N////;;;;&B0c&L18&N////;;;;;;;;;;;;&C;";
+
+//const String Pulse5 = "&C&A00&b60&L00&N////;;;;;;;;;;;;&b0e&L02&N////;;;;;;;;&b18&L15&N////;;;;&B0d&L18&N////;;;;;;;;;;;;&B04&L02&N////;;;;&b60&L00&N////;;;;;;;;;;;;&b0e&L02&N////;;;;;;;;&b18&L15&N////;;;;&B0d&L18&N////;;;;;;;;;;;;&B04&L02&N////;;;;&b60&L00&N////;;;;;;;;;;;;&b0e&L02&N////;;;;;;;;&b18&L15&N////;;;;&B0d&L18&N////;;;;;;;;;;;;&B04&L02&N////;;;;&C;";
 
 String Name;
 String MQTTUsername;
@@ -62,11 +71,10 @@ Ticker buttonTicker1;
 Ticker buttonTicker2;
 Ticker buttonTicker3;
 Ticker heartTicker;
-// Ticker ticker;
 
 DataStream stream;
 Pixel pixels[PixelLen];
-PixelColor colors[2] = {{0, 255, 20, 5, 35}, {120, 255, 20, 5, 35}};
+PixelColor colors[2] = {{0, 255, 20, 5, 35}, {120, 255, 45, 0, 45}};
 bool colorsIdx = 0;
 
 struct WiFiEntry
@@ -112,9 +120,9 @@ void attachs()
 {
     streamOpen();
     attachInterrupt(digitalPinToInterrupt(PinTouch), buttonTickIrq, CHANGE);
-    button.attachClick([]() { stream.write("&C&NgAAA;&C;"); });
+    button.attachClick([]() { stream.write(Pulse); });
     button.attachDoubleClick([]() { menuBeginFlag = 1; });
-    // button.attachMultiClick([]() { stream.write("&N4AAA;"); });
+    // button.attachMultiClick([]() { stream.write(Pulse3); });
     button.attachLongPressStart([]() { stream.write("&N8AAA;"); });
     button.attachLongPressStop([]() { stream.write("&N+AAA;"); });
 }
@@ -314,7 +322,7 @@ void heartRun(byte b1, byte b2, byte b3, byte b4)
     }
 }
 
-void heartSet()
+void heartTick()
 {
     bool running = 1;
     while (stream.avalible && running)
@@ -338,6 +346,9 @@ void heartSet()
                 break;
             case 'B':
                 colors[colorsIdx].B = parseHex(stream.read(), stream.read());
+                break;
+            case 'b':
+                colors[colorsIdx].B = -1 * parseHex(stream.read(), stream.read());
                 break;
             case 'C':
                 heartColorsToggle();
@@ -375,11 +386,6 @@ void heartSet()
     {
         streamEnd();
     }
-}
-
-void heartTick()
-{
-    heartSet();
 }
 
 void indicatorClear()
