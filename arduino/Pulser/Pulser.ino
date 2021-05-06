@@ -22,17 +22,18 @@
 const byte PixelLen = 20;
 const byte FrameRate = 17; // =1000ms/60fps
 const byte PinTouch = 12;
-byte Sleep = 200;
+const byte Sleep = 100;
 const int MQTTPort = 1883;
 const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
-const char *Version = "v1.5.05060044";
+const char *Version = "v2.0.05061200";
 //const String Pulse1 = "&C&A00&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&C;";
 
 //const String Pulse2 = "&C&A00&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&C;";
 
 //const String Pulse3 = "&C&A00&b80&L00&N////;;;;;;;;&b08&L02&N////;;;;;;&b80&L1a&N////;;;;;;;;&B54&L1c&N////;;;;;;&B0b&L1a&N////;;;;;;;;;;&B02&L01&N////;;&b80&L00&N////;;;;;;;;&b08&L02&N////;;;;;;&b80&L1a&N////;;;;;;;;&B54&L1c&N////;;;;;;&B0b&L1a&N////;;;;;;;;;;&B02&L01&N////;;&b80&L00&N////;;;;;;;;&b08&L02&N////;;;;;;&b80&L1a&N////;;;;;;;;&B54&L1c&N////;;;;;;&B0b&L1a&N////;;;;;;;;;;&B02&L01&N////;;&b80&L00&N////;;;;;;;;&b08&L02&N////;;;;;;&b80&L1a&N////;;;;;;;;&B54&L1c&N////;;;;;;&B0b&L1a&N////;;;;;;;;;;&B02&L01&N////;;&C;";
 
-const String Pulse = "&C&A00&bff&L00&N////;;;;;;;;;;;;;;;;&b0e&L02&N////;;;;;;;;&b18&L15&N////;;;;&B0c&L18&N////;;;;;;;;;;;;&bff&L00&N////;;;;;;;;;;;;;;;;&b0e&L02&N////;;;;;;;;&b18&L15&N////;;;;&B0c&L18&N////;;;;;;;;;;;;&bff&L00&N////;;;;;;;;;;;;;;;;&b0e&L02&N////;;;;;;;;&b18&L15&N////;;;;&B0c&L18&N////;;;;;;;;;;;;&C;";
+// const String Pulse = "&bff&L00&N////;;;;;;;;;;;;;;;;&b0e&L02&N////;;;;;;;;&b18&L15&N////;;;;&B0c&L18&N////;;;;;;;;;;;;";
+const String Pulse = "&b0d&L00&N////;;;;;;;;&b20&L14&N////;;;;&B16&L18&N////;;;;;;;;;;;;;;;;;;;;&B08&L02&N////;;;;;;;;";
 
 //const String Pulse5 = "&C&A00&b60&L00&N////;;;;;;;;;;;;&b0e&L02&N////;;;;;;;;&b18&L15&N////;;;;&B0d&L18&N////;;;;;;;;;;;;&B04&L02&N////;;;;&b60&L00&N////;;;;;;;;;;;;&b0e&L02&N////;;;;;;;;&b18&L15&N////;;;;&B0d&L18&N////;;;;;;;;;;;;&B04&L02&N////;;;;&b60&L00&N////;;;;;;;;;;;;&b0e&L02&N////;;;;;;;;&b18&L15&N////;;;;&B0d&L18&N////;;;;;;;;;;;;&B04&L02&N////;;;;&C;";
 
@@ -40,7 +41,7 @@ String Name;
 String MQTTUsername;
 String MQTTPassword;
 String MQTTClientid;
-String MQTTPub;
+String MQTTPub[2];
 String MQTTSub[2];
 float BatteryOffset;
 
@@ -71,6 +72,8 @@ Ticker buttonTicker1;
 Ticker buttonTicker2;
 Ticker buttonTicker3;
 Ticker heartTicker;
+Ticker pulseTicker;
+byte pulseTickerTimeout = 10;
 
 DataStream stream;
 Pixel pixels[PixelLen];
@@ -89,19 +92,19 @@ void PreDefines()
     unsigned int ID = ESP.getChipId();
     if (ID == 15406060)
     {
-        MQTTPub = "PB/U/M";
+        MQTTPub[0] = "PB/U/M";
+        MQTTPub[1] = "PB/D/R";
         MQTTSub[0] = "PB/D/M";
         MQTTSub[1] = "PB/D/MR";
         BatteryOffset = -0.03;
-        Sleep = 200;
     }
     else if (ID == 10409937)
     {
-        MQTTPub = "PB/U/R";
+        MQTTPub[0] = "PB/U/R";
+        MQTTPub[1] = "PB/D/M";
         MQTTSub[0] = "PB/D/R";
         MQTTSub[1] = "PB/D/MR";
         BatteryOffset = -0.19;
-        Sleep = 100;
     }
     else
     {
@@ -109,7 +112,8 @@ void PreDefines()
         MQTTUsername = "";
         MQTTPassword = "";
         MQTTClientid = "";
-        MQTTPub = "";
+        MQTTPub[0] = "";
+        MQTTPub[1] = "";
         MQTTSub[0] = "";
         MQTTSub[1] = "";
         BatteryOffset = 0;
@@ -120,11 +124,11 @@ void attachs()
 {
     streamOpen();
     attachInterrupt(digitalPinToInterrupt(PinTouch), buttonTickIrq, CHANGE);
-    button.attachClick([]() { stream.write(Pulse); });
+    button.attachClick([]() { stream.write("&C1&A00;"+Pulse+"&C0;"); });
     button.attachDoubleClick([]() { menuBeginFlag = 1; });
     // button.attachMultiClick([]() { stream.write(Pulse3); });
-    button.attachLongPressStart([]() { stream.write("&N8AAA;"); });
-    button.attachLongPressStop([]() { stream.write("&N+AAA;"); });
+    button.attachLongPressStart(menuPulseStart);
+    button.attachLongPressStop(menuPulseStop);
 }
 
 void detachs()
@@ -217,12 +221,12 @@ void buttonTickTmr()
 
 void cmdACK()
 {
-    MQTT.publish(MQTTPub, Name + '_' + Version);
+    MQTT.publish(MQTTPub[0], Name + '_' + Version);
 }
 
 void cmdBattery()
 {
-    MQTT.publish(MQTTPub, String(batteryGet()) + '%');
+    MQTT.publish(MQTTPub[0], String(batteryGet()) + '%');
 }
 
 void cmdDefault(String &payload) {}
@@ -247,10 +251,27 @@ void cmdHSL(String &payload)
 void cmdID()
 {
     unsigned int ID = ESP.getChipId();
-    MQTT.publish(MQTTPub, String(ID));
+    MQTT.publish(MQTTPub[0], String(ID));
 }
 
-void cmdPulse(String &payload) {}
+void cmdPulse(String &payload)
+{
+    switch (payload[2])
+    {
+    case 'A':
+        menuPulseBegin();
+        MQTT.publish(MQTTPub[1], ":Pa");
+        break;
+    case 'a':
+        /* code */
+        break;
+    case 'B':
+        menuPulseEnd();
+        break;
+    default:
+        break;
+    }
+}
 
 void cmdRGB(String &payload) {}
 
@@ -261,11 +282,11 @@ void cmdUpdate(String &paylaod)
     {
         url = paylaod.substring(2);
     }
-    MQTT.publish(MQTTPub, "Starting update from " + url);
+    MQTT.publish(MQTTPub[0], "Starting update from " + url);
 
     ESPhttpUpdate.setLedPin(LED_BUILTIN, LOW);
-    ESPhttpUpdate.onStart([] { MQTT.publish(MQTTPub, "[httpUpdate] Started"); });
-    ESPhttpUpdate.onError([](int err) { MQTT.publish(MQTTPub, String("[httpUpdate] Error: ") + ESPhttpUpdate.getLastErrorString().c_str()); });
+    ESPhttpUpdate.onStart([] { MQTT.publish(MQTTPub[0], "[httpUpdate] Started"); });
+    ESPhttpUpdate.onError([](int err) { MQTT.publish(MQTTPub[0], String("[httpUpdate] Error: ") + ESPhttpUpdate.getLastErrorString().c_str()); });
     ESPhttpUpdate.update(url);
 }
 
@@ -293,9 +314,12 @@ void heartClear(byte i)
     heart.Show();
 }
 
-void heartColorsToggle()
+void heartColorSets(byte Idx)
 {
-    colorsIdx = !colorsIdx;
+    if ((Idx >= '0') && (Idx <= '1'))
+    {
+        colorsIdx = Idx - '0';
+    }
 }
 
 void heartEnd()
@@ -351,7 +375,7 @@ void heartTick()
                 colors[colorsIdx].B = -1 * parseHex(stream.read(), stream.read());
                 break;
             case 'C':
-                heartColorsToggle();
+                heartColorSets(stream.read());
                 break;
             case 'N':
                 heartRun(stream.read(), stream.read(), stream.read(), stream.read());
@@ -440,6 +464,45 @@ void menuLoop()
     }
 }
 
+void menuPulseBegin()
+{
+    colors[1].H = colors[0].H;
+    stream.write("&C1&A00;");
+    pulseTickerTimeout = 10;
+    pulseTicker.attach_ms(675, menuPulseTick);
+}
+
+void menuPulseEnd()
+{
+    pulseTicker.detach();
+    stream.write("&C0;");
+}
+
+void menuPulseStart()
+{
+    MQTT.publish(MQTTPub[1], ":PA");
+    menuPulseBegin();
+}
+
+void menuPulseStop()
+{
+    menuPulseEnd();
+    MQTT.publish(MQTTPub[1], ":PB");
+}
+
+void menuPulseTick()
+{
+    if (pulseTickerTimeout)
+    {
+        --pulseTickerTimeout;
+        stream.write(Pulse);
+    }
+    else
+    {
+        pulseTicker.detach();
+    }
+}
+
 void MQTTConnect()
 {
     // heartClear(); cause to turn off battert indicator.
@@ -513,7 +576,7 @@ void MQTTMsg(String &topic, String &payload)
             cmdUpdate(payload);
             break;
         default:
-            MQTT.publish(MQTTPub, "Unknown command");
+            MQTT.publish(MQTTPub[0], "Unknown command");
             break;
         }
     }
