@@ -152,6 +152,7 @@ ICACHE_RAM_ATTR void buttonTickIrq()
 
 void battryAnimation()
 {
+    byte battery = batteryGet();
     heartClear();
     detachs();
     heartBegin();
@@ -160,7 +161,6 @@ void battryAnimation()
         heart.SetPixelColor(i, HslColor(i / (PixelLen * 3.0f), 1, indicatorLightness / 510.0f));
     }
     heart.Show();
-    byte battery = batteryGet();
     battery = battery * PixelLen / 100;
     for (byte i = PixelLen - 1; i >= battery; --i)
     {
