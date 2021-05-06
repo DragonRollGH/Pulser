@@ -25,7 +25,7 @@ const byte PinTouch = 12;
 const byte Sleep = 100;
 const int MQTTPort = 1883;
 const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
-const char *Version = "v2.0.05061200";
+const char *Version = "v2.1.05061600";
 //const String Pulse1 = "&C&A00&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&C;";
 
 //const String Pulse2 = "&C&A00&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&C;";
@@ -60,6 +60,10 @@ bool indicatorToggleFlag = 0;
 
 bool menuBeginFlag = 0;
 
+bool pulseConflictFlag = 0;
+byte pulseOtherH;
+byte pulseTickerTimeout;
+
 bool streamBeginFlag = 0;
 unsigned int streamCache = 1;
 
@@ -68,16 +72,13 @@ NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> heart(PixelLen);
 OneButton button(PinTouch, false, false);
 WiFiClient WLAN;
 WiFiManager WM;
-Ticker buttonTicker1;
-Ticker buttonTicker2;
-Ticker buttonTicker3;
+Ticker buttonTicker[3];
 Ticker heartTicker;
 Ticker pulseTicker;
-byte pulseTickerTimeout = 10;
 
 DataStream stream;
 Pixel pixels[PixelLen];
-PixelColor colors[2] = {{0, 255, 20, 5, 35}, {120, 255, 45, 0, 45}};
+PixelColor colors[2] = {{0, 255, 20, 5, 35}, {85, 255, 0, 0, 1}};
 bool colorsIdx = 0;
 
 struct WiFiEntry
@@ -97,6 +98,7 @@ void PreDefines()
         MQTTSub[0] = "PB/D/M";
         MQTTSub[1] = "PB/D/MR";
         BatteryOffset = -0.03;
+        colors[0].H = 120;
     }
     else if (ID == 10409937)
     {
@@ -105,6 +107,7 @@ void PreDefines()
         MQTTSub[0] = "PB/D/R";
         MQTTSub[1] = "PB/D/MR";
         BatteryOffset = -0.19;
+        colors[0].H = 0;
     }
     else
     {
@@ -124,7 +127,7 @@ void attachs()
 {
     streamOpen();
     attachInterrupt(digitalPinToInterrupt(PinTouch), buttonTickIrq, CHANGE);
-    button.attachClick([]() { stream.write("&C1&A00;"+Pulse+"&C0;"); });
+    button.attachClick([]() { stream.write("&C1&A00;" + Pulse + "&C0;"); });
     button.attachDoubleClick([]() { menuBeginFlag = 1; });
     // button.attachMultiClick([]() { stream.write(Pulse3); });
     button.attachLongPressStart(menuPulseStart);
@@ -137,17 +140,17 @@ void detachs()
     streamClose();
     button.reset();
     detachInterrupt(digitalPinToInterrupt(PinTouch));
-    buttonTicker1.detach();
-    buttonTicker2.detach();
-    buttonTicker3.detach();
+    buttonTicker[0].detach();
+    buttonTicker[1].detach();
+    buttonTicker[2].detach();
 }
 
 ICACHE_RAM_ATTR void buttonTickIrq()
 {
     button.tick();
-    buttonTicker1.once_ms(60, buttonTickTmr);
-    buttonTicker2.once_ms(310, buttonTickTmr);
-    buttonTicker3.once_ms(810, buttonTickTmr);
+    buttonTicker[0].once_ms(60, buttonTickTmr);
+    buttonTicker[1].once_ms(310, buttonTickTmr);
+    buttonTicker[2].once_ms(810, buttonTickTmr);
 }
 
 void battryAnimation()
@@ -259,14 +262,15 @@ void cmdPulse(String &payload)
     switch (payload[2])
     {
     case 'A':
-        menuPulseBegin();
-        MQTT.publish(MQTTPub[1], ":Pa");
+        pulseOtherH = parseHex(payload[3], payload[4]);
+        menuPulseBegin(1);
+        // MQTT.publish(MQTTPub[1], ":Pa");
         break;
     case 'a':
         /* code */
         break;
     case 'B':
-        menuPulseEnd();
+        menuPulseEnd(1);
         break;
     default:
         break;
@@ -464,29 +468,44 @@ void menuLoop()
     }
 }
 
-void menuPulseBegin()
+void menuPulseBegin(bool other)
 {
-    colors[1].H = colors[0].H;
-    stream.write("&C1&A00;");
-    pulseTickerTimeout = 10;
-    pulseTicker.attach_ms(675, menuPulseTick);
+    colors[1].H = (other) ? pulseOtherH : colors[0].H;
+    if (!pulseTicker.active())
+    {
+        stream.write("&C1&A00;");
+        pulseTickerTimeout = 20;
+        pulseTicker.attach_ms(675, menuPulseTick);
+    }
+    else
+    {
+        pulseConflictFlag = 1;
+    }
 }
 
-void menuPulseEnd()
+void menuPulseEnd(bool other)
 {
-    pulseTicker.detach();
-    stream.write("&C0;");
+    if (pulseConflictFlag)
+    {
+        pulseConflictFlag = 0;
+        colors[1].H = (other) ? colors[0].H : pulseOtherH;
+    }
+    else
+    {
+        pulseTicker.detach();
+        stream.write("&C0;");
+    }
 }
 
 void menuPulseStart()
 {
-    MQTT.publish(MQTTPub[1], ":PA");
-    menuPulseBegin();
+    MQTT.publish(MQTTPub[1], ":PA" + toHex(colors[0].H));
+    menuPulseBegin(0);
 }
 
 void menuPulseStop()
 {
-    menuPulseEnd();
+    menuPulseEnd(0);
     MQTT.publish(MQTTPub[1], ":PB");
 }
 
@@ -627,6 +646,16 @@ void streamLoop()
 void streamOpen()
 {
     stream.open();
+}
+
+String toHex(byte h)
+{
+    String s = String(h, 16);
+    if (h < 16)
+    {
+        s = '0' + s;
+    }
+    return s;
 }
 
 void WiFiAdd(String SSID, String PASS)
