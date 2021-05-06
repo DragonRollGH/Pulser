@@ -25,7 +25,7 @@ const byte PinTouch = 12;
 const byte Sleep = 100;
 const int MQTTPort = 1883;
 const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
-const char *Version = "v2.1.05061600";
+const char *Version = "v2.1.05062000";
 //const String Pulse1 = "&C&A00&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&C;";
 
 //const String Pulse2 = "&C&A00&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&C;";
@@ -167,9 +167,9 @@ void battryAnimation()
     battery = battery * PixelLen / 100;
     for (byte i = PixelLen - 1; i >= battery; --i)
     {
+        delay(1000 / (PixelLen - battery));
         heartClear(i);
         heart.Show();
-        delay(1000 / battery);
     }
     if (battery == 0)
     {
