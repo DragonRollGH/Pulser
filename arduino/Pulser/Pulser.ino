@@ -25,17 +25,8 @@ const byte PinTouch = 12;
 const byte Sleep = 100;
 const int MQTTPort = 1883;
 const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
-const char *Version = "v2.1.05062000";
-//const String Pulse1 = "&C&A00&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&b80&L00&N////;;;;;;;;;;;;;;;;;;;;&b20&L05&N////;;;;;;;;;;;;;;;;;;;;&B14&L19&N////;;;;;;;;;;;;;;;;;;;;&C;";
-
-//const String Pulse2 = "&C&A00&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&b40&L00&N////;;;;;;;;;;&b18&L05&N////;;;;;;;;;;;;;;;&B0f&L19&N////;;;;;;;;;;;;;;;&C;";
-
-//const String Pulse3 = "&C&A00&b80&L00&N////;;;;;;;;&b08&L02&N////;;;;;;&b80&L1a&N////;;;;;;;;&B54&L1c&N////;;;;;;&B0b&L1a&N////;;;;;;;;;;&B02&L01&N////;;&b80&L00&N////;;;;;;;;&b08&L02&N////;;;;;;&b80&L1a&N////;;;;;;;;&B54&L1c&N////;;;;;;&B0b&L1a&N////;;;;;;;;;;&B02&L01&N////;;&b80&L00&N////;;;;;;;;&b08&L02&N////;;;;;;&b80&L1a&N////;;;;;;;;&B54&L1c&N////;;;;;;&B0b&L1a&N////;;;;;;;;;;&B02&L01&N////;;&b80&L00&N////;;;;;;;;&b08&L02&N////;;;;;;&b80&L1a&N////;;;;;;;;&B54&L1c&N////;;;;;;&B0b&L1a&N////;;;;;;;;;;&B02&L01&N////;;&C;";
-
-// const String Pulse = "&bff&L00&N////;;;;;;;;;;;;;;;;&b0e&L02&N////;;;;;;;;&b18&L15&N////;;;;&B0c&L18&N////;;;;;;;;;;;;";
 const String Pulse = "&b0d&L00&N////;;;;;;;;&b20&L14&N////;;;;&B16&L18&N////;;;;;;;;;;;;;;;;;;;;&B08&L02&N////;;;;;;;;";
-
-//const String Pulse5 = "&C&A00&b60&L00&N////;;;;;;;;;;;;&b0e&L02&N////;;;;;;;;&b18&L15&N////;;;;&B0d&L18&N////;;;;;;;;;;;;&B04&L02&N////;;;;&b60&L00&N////;;;;;;;;;;;;&b0e&L02&N////;;;;;;;;&b18&L15&N////;;;;&B0d&L18&N////;;;;;;;;;;;;&B04&L02&N////;;;;&b60&L00&N////;;;;;;;;;;;;&b0e&L02&N////;;;;;;;;&b18&L15&N////;;;;&B0d&L18&N////;;;;;;;;;;;;&B04&L02&N////;;;;&C;";
+const char *Version = "v2.1.05062000";
 
 String Name;
 String MQTTUsername;
@@ -43,7 +34,7 @@ String MQTTPassword;
 String MQTTClientid;
 String MQTTPub[2];
 String MQTTSub[2];
-float BatteryOffset;
+float batteryOffset;
 
 //define in FS
 // byte H = 0;
@@ -52,20 +43,21 @@ float BatteryOffset;
 // byte A = 5;
 // byte B = 35;
 
+bool batteryBeginFlag = 0;
+
 bool heartBeginFlag = 0;
 
 byte indicatorLightness = 20;
 byte indicatorPin = 10;
 bool indicatorToggleFlag = 0;
 
-bool menuBeginFlag = 0;
-
 bool pulseConflictFlag = 0;
 byte pulseOtherH;
+bool pulseOtherOnline = 0;
 byte pulseTickerTimeout;
 
 bool streamBeginFlag = 0;
-unsigned int streamCache = 1;
+byte streamCache = 1;
 
 MQTTClient MQTT(512);
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> heart(PixelLen);
@@ -97,7 +89,7 @@ void PreDefines()
         MQTTPub[1] = "PB/D/R";
         MQTTSub[0] = "PB/D/M";
         MQTTSub[1] = "PB/D/MR";
-        BatteryOffset = -0.03;
+        batteryOffset = -0.03;
         colors[0].H = 120;
     }
     else if (ID == 10409937)
@@ -106,7 +98,7 @@ void PreDefines()
         MQTTPub[1] = "PB/D/M";
         MQTTSub[0] = "PB/D/R";
         MQTTSub[1] = "PB/D/MR";
-        BatteryOffset = -0.19;
+        batteryOffset = -0.19;
         colors[0].H = 0;
     }
     else
@@ -119,7 +111,7 @@ void PreDefines()
         MQTTPub[1] = "";
         MQTTSub[0] = "";
         MQTTSub[1] = "";
-        BatteryOffset = 0;
+        batteryOffset = 0;
     }
 }
 
@@ -128,10 +120,10 @@ void attachs()
     streamOpen();
     attachInterrupt(digitalPinToInterrupt(PinTouch), buttonTickIrq, CHANGE);
     button.attachClick([]() { stream.write("&C1&A00;" + Pulse + "&C0;"); });
-    button.attachDoubleClick([]() { menuBeginFlag = 1; });
+    button.attachDoubleClick([]() { batteryBeginFlag = 1; });
     // button.attachMultiClick([]() { stream.write(Pulse3); });
-    button.attachLongPressStart(menuPulseStart);
-    button.attachLongPressStop(menuPulseStop);
+    button.attachLongPressStart(pulseStart);
+    button.attachLongPressStop(pulseStop);
 }
 
 void detachs()
@@ -145,12 +137,9 @@ void detachs()
     buttonTicker[2].detach();
 }
 
-ICACHE_RAM_ATTR void buttonTickIrq()
+void ackMsg()
 {
-    button.tick();
-    buttonTicker[0].once_ms(60, buttonTickTmr);
-    buttonTicker[1].once_ms(310, buttonTickTmr);
-    buttonTicker[2].once_ms(810, buttonTickTmr);
+    MQTT.publish(MQTTPub[0], Name + '_' + Version);
 }
 
 void battryAnimation()
@@ -190,7 +179,7 @@ byte batteryGet()
         adcs += analogRead(A0);
         delay(10);
     }
-    float voltage = (adcs / 10) * 247.0f / 1024 / 47 + BatteryOffset;
+    float voltage = (adcs / 10) * 247.0f / 1024 / 47 + batteryOffset;
     byte percent = (voltage - 3.2) * 100;
     if (percent > 150)
     {
@@ -217,30 +206,34 @@ void batteryInitialize()
     }
 }
 
+void batteryMsg()
+{
+    MQTT.publish(MQTTPub[0], String(batteryGet()) + '%');
+}
+
+ICACHE_RAM_ATTR void buttonTickIrq()
+{
+    button.tick();
+    buttonTicker[0].once_ms(60, buttonTickTmr);
+    buttonTicker[1].once_ms(310, buttonTickTmr);
+    buttonTicker[2].once_ms(810, buttonTickTmr);
+}
+
 void buttonTickTmr()
 {
     button.tick();
 }
 
-void cmdACK()
-{
-    MQTT.publish(MQTTPub[0], Name + '_' + Version);
-}
-
-void cmdBattery()
-{
-    MQTT.publish(MQTTPub[0], String(batteryGet()) + '%');
-}
-
-void cmdDefault(String &payload) {}
-
-void cmdFile(String &payload)
+void configMsg()
 {
     LittleFS.begin();
+    WiFiConfigNew();
     LittleFS.end();
 }
 
-void cmdHSL(String &payload)
+void defaultMsg(String &payload) {}
+
+void hslMsg(String &payload)
 {
     if (payload.length() > 2)
     {
@@ -249,49 +242,6 @@ void cmdHSL(String &payload)
             stream.write(payload[i]);
         }
     }
-}
-
-void cmdID()
-{
-    unsigned int ID = ESP.getChipId();
-    MQTT.publish(MQTTPub[0], String(ID));
-}
-
-void cmdPulse(String &payload)
-{
-    switch (payload[2])
-    {
-    case 'A':
-        pulseOtherH = parseHex(payload[3], payload[4]);
-        menuPulseBegin(1);
-        // MQTT.publish(MQTTPub[1], ":Pa");
-        break;
-    case 'a':
-        /* code */
-        break;
-    case 'B':
-        menuPulseEnd(1);
-        break;
-    default:
-        break;
-    }
-}
-
-void cmdRGB(String &payload) {}
-
-void cmdUpdate(String &paylaod)
-{
-    String url = "http://tj.dragonroll.cn:5500/arduino/Pulser/Pulser.ino.generic.bin";
-    if (paylaod.length() > 2)
-    {
-        url = paylaod.substring(2);
-    }
-    MQTT.publish(MQTTPub[0], "Starting update from " + url);
-
-    ESPhttpUpdate.setLedPin(LED_BUILTIN, LOW);
-    ESPhttpUpdate.onStart([] { MQTT.publish(MQTTPub[0], "[httpUpdate] Started"); });
-    ESPhttpUpdate.onError([](int err) { MQTT.publish(MQTTPub[0], String("[httpUpdate] Error: ") + ESPhttpUpdate.getLastErrorString().c_str()); });
-    ESPhttpUpdate.update(url);
 }
 
 void heartBegin()
@@ -416,6 +366,12 @@ void heartTick()
     }
 }
 
+void idMsg()
+{
+    unsigned int ID = ESP.getChipId();
+    MQTT.publish(MQTTPub[0], String(ID));
+}
+
 void indicatorClear()
 {
     indicatorToggleFlag = false;
@@ -461,64 +417,10 @@ void indicatorToggle(char c)
 
 void menuLoop()
 {
-    if (menuBeginFlag)
+    if (batteryBeginFlag)
     {
-        menuBeginFlag = 0;
+        batteryBeginFlag = 0;
         battryAnimation();
-    }
-}
-
-void menuPulseBegin(bool other)
-{
-    colors[1].H = (other) ? pulseOtherH : colors[0].H;
-    if (!pulseTicker.active())
-    {
-        stream.write("&C1&A00;");
-        pulseTickerTimeout = 20;
-        pulseTicker.attach_ms(675, menuPulseTick);
-    }
-    else
-    {
-        pulseConflictFlag = 1;
-    }
-}
-
-void menuPulseEnd(bool other)
-{
-    if (pulseConflictFlag)
-    {
-        pulseConflictFlag = 0;
-        colors[1].H = (other) ? colors[0].H : pulseOtherH;
-    }
-    else
-    {
-        pulseTicker.detach();
-        stream.write("&C0;");
-    }
-}
-
-void menuPulseStart()
-{
-    MQTT.publish(MQTTPub[1], ":PA" + toHex(colors[0].H));
-    menuPulseBegin(0);
-}
-
-void menuPulseStop()
-{
-    menuPulseEnd(0);
-    MQTT.publish(MQTTPub[1], ":PB");
-}
-
-void menuPulseTick()
-{
-    if (pulseTickerTimeout)
-    {
-        --pulseTickerTimeout;
-        stream.write(Pulse);
-    }
-    else
-    {
-        pulseTicker.detach();
     }
 }
 
@@ -539,7 +441,7 @@ void MQTTConnect()
     MQTT.subscribe(MQTTSub[0]);
     delay(10);
     MQTT.subscribe(MQTTSub[1]);
-    cmdACK();
+    ackMsg();
     heartClear();
     attachs();
     delay(10);
@@ -568,31 +470,31 @@ void MQTTMsg(String &topic, String &payload)
         switch (payload[1])
         {
         case 'A':
-            cmdACK();
+            ackMsg();
             break;
         case 'B':
-            cmdBattery();
+            batteryMsg();
+            break;
+        case 'C':
+            configMsg();
             break;
         case 'D':
-            cmdDefault(payload);
-            break;
-        case 'F':
-            WiFiConfigNew();
+            defaultMsg(payload);
             break;
         case 'H':
-            cmdHSL(payload);
+            hslMsg(payload);
             break;
         case 'I':
-            cmdID();
+            idMsg();
             break;
         case 'P':
-            cmdPulse(payload);
+            pulseMsg(payload);
             break;
         case 'R':
-            cmdRGB(payload);
+            rgbMsg(payload);
             break;
         case 'U':
-            cmdUpdate(payload);
+            updateMsg(payload);
             break;
         default:
             MQTT.publish(MQTTPub[0], "Unknown command");
@@ -616,6 +518,88 @@ byte parseHex(byte H, byte L)
 {
     return parseHex(H) * 16 + parseHex(L);
 }
+
+void pulseBegin(bool other)
+{
+    colors[1].H = (other) ? pulseOtherH : colors[0].H;
+    if (!pulseTicker.active())
+    {
+        stream.write("&C1&A00;");
+        pulseTickerTimeout = 20;
+        pulseTicker.attach_ms(675, pulseTick);
+    }
+    else
+    {
+        pulseConflictFlag = 1;
+    }
+}
+
+void pulseEnd(bool other)
+{
+    if (pulseConflictFlag)
+    {
+        pulseConflictFlag = 0;
+        colors[1].H = (other) ? colors[0].H : pulseOtherH;
+    }
+    else
+    {
+        pulseTicker.detach();
+        stream.write("&C0;");
+    }
+}
+
+void pulseMsg(String &payload)
+{
+    switch (payload[2])
+    {
+    case 'A':
+        pulseOtherH = parseHex(payload[3], payload[4]);
+        pulseBegin(1);
+        // MQTT.publish(MQTTPub[1], ":Pa");
+        break;
+    case 'a':
+        /* code */
+        break;
+    case 'B':
+        pulseEnd(1);
+        break;
+    default:
+        break;
+    }
+}
+
+void pulseOnline()
+{
+
+    MQTT.publish(MQTTPub[1], ":PO");
+}
+
+void pulseStart()
+{
+    MQTT.publish(MQTTPub[1], ":PA" + toHex(colors[0].H));
+    pulseBegin(0);
+}
+
+void pulseStop()
+{
+    pulseEnd(0);
+    MQTT.publish(MQTTPub[1], ":PB");
+}
+
+void pulseTick()
+{
+    if (pulseTickerTimeout)
+    {
+        --pulseTickerTimeout;
+        stream.write(Pulse);
+    }
+    else
+    {
+        pulseTicker.detach();
+    }
+}
+
+void rgbMsg(String &payload) {}
 
 void streamBegin()
 {
@@ -658,6 +642,21 @@ String toHex(byte h)
     return s;
 }
 
+void updateMsg(String &paylaod)
+{
+    String url = "http://tj.dragonroll.cn:5500/arduino/Pulser/Pulser.ino.generic.bin";
+    if (paylaod.length() > 2)
+    {
+        url = paylaod.substring(2);
+    }
+    MQTT.publish(MQTTPub[0], "Starting update from " + url);
+
+    ESPhttpUpdate.setLedPin(LED_BUILTIN, LOW);
+    ESPhttpUpdate.onStart([] { MQTT.publish(MQTTPub[0], "[httpUpdate] Started"); });
+    ESPhttpUpdate.onError([](int err) { MQTT.publish(MQTTPub[0], String("[httpUpdate] Error: ") + ESPhttpUpdate.getLastErrorString().c_str()); });
+    ESPhttpUpdate.update(url);
+}
+
 void WiFiAdd(String SSID, String PASS)
 {
     WiFiList.push_back(WiFiEntry{SSID, PASS});
@@ -665,13 +664,11 @@ void WiFiAdd(String SSID, String PASS)
 
 void WiFiConfigNew()
 {
-    LittleFS.begin();
     StaticJsonDocument<128> doc;
     doc["len"] = 0;
     File WiFiConfig = LittleFS.open("/WiFi.json", "w");
     serializeJson(doc, WiFiConfig);
     WiFiConfig.close();
-    LittleFS.end();
 }
 
 void WiFiConfigRead()
@@ -690,11 +687,7 @@ void WiFiConfigRead()
     }
     else
     {
-        StaticJsonDocument<128> doc;
-        doc["len"] = 0;
-        File WiFiConfig = LittleFS.open("/WiFi.json", "w");
-        serializeJson(doc, WiFiConfig);
-        WiFiConfig.close();
+        WiFiConfigNew();
     }
     LittleFS.end();
 }
