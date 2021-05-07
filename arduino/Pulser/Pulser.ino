@@ -47,8 +47,11 @@ bool batteryBeginFlag = 0;
 
 bool heartBeginFlag = 0;
 
+byte indicators[2] = {0, 10};
+bool indicatorFlags[2] = {0, 0};
+byte indicatorBattery = 0;
+byte indicatorNetwork = 1;
 byte indicatorLightness = 20;
-byte indicatorPin = 10;
 bool indicatorToggleFlag = 0;
 
 bool pulseConflictFlag = 0;
@@ -71,7 +74,7 @@ Ticker pulseTicker;
 DataStream stream;
 Pixel pixels[PixelLen];
 PixelColor colors[2] = {{0, 255, 20, 5, 35}, {85, 255, 0, 0, 1}};
-bool colorsIdx = 0;
+bool colorCurrent = 0;
 
 struct WiFiEntry
 {
@@ -196,7 +199,7 @@ void batteryInitialize()
 {
     byte battery = batteryGet();
     heartBegin();
-    heart.SetPixelColor(0, HslColor(battery / 300.0f, 1, indicatorLightness / 510.0f));
+    heart.SetPixelColor(indicators[indicatorBattery], HslColor(battery / 300.0f, 1, indicatorLightness / 510.0f));
     heart.Show();
     if (battery == 0)
     {
@@ -272,7 +275,7 @@ void heartColorSets(byte Idx)
 {
     if ((Idx >= '0') && (Idx <= '1'))
     {
-        colorsIdx = Idx - '0';
+        colorCurrent = Idx - '0';
     }
 }
 
@@ -294,7 +297,7 @@ void heartRun(byte b1, byte b2, byte b3, byte b4)
     {
         if (arry[i / 8] & (byte)128)
         {
-            pixels[i].run(colors[colorsIdx]);
+            pixels[i].run(colors[colorCurrent]);
         }
         arry[i / 8] <<= 1;
     }
@@ -311,22 +314,22 @@ void heartTick()
             switch (stream.read())
             {
             case 'H':
-                colors[colorsIdx].H = parseHex(stream.read(), stream.read());
+                colors[colorCurrent].H = parseHex(stream.read(), stream.read());
                 break;
             case 'S':
-                colors[colorsIdx].S = parseHex(stream.read(), stream.read());
+                colors[colorCurrent].S = parseHex(stream.read(), stream.read());
                 break;
             case 'L':
-                colors[colorsIdx].L = parseHex(stream.read(), stream.read());
+                colors[colorCurrent].L = parseHex(stream.read(), stream.read());
                 break;
             case 'A':
-                colors[colorsIdx].A = parseHex(stream.read(), stream.read());
+                colors[colorCurrent].A = parseHex(stream.read(), stream.read());
                 break;
             case 'B':
-                colors[colorsIdx].B = parseHex(stream.read(), stream.read());
+                colors[colorCurrent].B = parseHex(stream.read(), stream.read());
                 break;
             case 'b':
-                colors[colorsIdx].B = -1 * parseHex(stream.read(), stream.read());
+                colors[colorCurrent].B = -1 * parseHex(stream.read(), stream.read());
                 break;
             case 'C':
                 heartColorSets(stream.read());
@@ -372,15 +375,15 @@ void idMsg()
     MQTT.publish(MQTTPub[0], String(ID));
 }
 
-void indicatorClear()
+void indicatorClear(byte indicator)
 {
-    indicatorToggleFlag = false;
-    heartClear(indicatorPin);
+    indicatorFlags[indicator] = false;
+    heartClear(indicators[indicator]);
 }
 
-void indicatorSet(char c)
+void indicatorSet(byte indicator, char c)
 {
-    indicatorToggleFlag = true;
+    indicatorFlags[indicator] = true;
     heartBegin();
     RgbColor color;
     switch (c)
@@ -398,20 +401,20 @@ void indicatorSet(char c)
         color = RgbColor(0, 0, 0);
         break;
     }
-    heart.SetPixelColor(indicatorPin, color);
+    heart.SetPixelColor(indicators[indicator], color);
     heart.Show();
 }
 
-void indicatorToggle(char c)
+void indicatorToggle(byte indicator, char c)
 {
-    indicatorToggleFlag = !indicatorToggleFlag;
-    if (indicatorToggleFlag)
+    indicatorFlags[indicator] = !indicatorFlags[indicator];
+    if (indicatorFlags[indicator])
     {
-        indicatorSet(c);
+        indicatorSet(indicator, c);
     }
     else
     {
-        indicatorClear();
+        indicatorClear(indicator);
     }
 }
 
@@ -426,7 +429,7 @@ void menuLoop()
 
 void MQTTConnect()
 {
-    // heartClear(); cause to turn off battert indicator.
+    // heartClear(); cause to turn off battery indicator.
     detachs();
     for (byte i = 0; i < 120; ++i)
     {
@@ -436,7 +439,7 @@ void MQTTConnect()
             break;
         }
         delay(500);
-        indicatorToggle('g');
+        indicatorToggle(indicatorNetwork, 'g');
     }
     MQTT.subscribe(MQTTSub[0]);
     delay(10);
@@ -729,7 +732,7 @@ int WiFiConnect()
 {
     if (WiFi.status() != WL_CONNECTED)
     {
-        indicatorSet('r');
+        indicatorSet(indicatorNetwork, 'r');
         WiFi.disconnect();
         WiFi.scanDelete();
         for (byte k = 0; k < 3; ++k)
@@ -761,10 +764,10 @@ int WiFiConnect()
                 WiFi.begin(WiFiList[bestWiFi].SSID, WiFiList[bestWiFi].PASS);
                 for (byte i = 0; i < 60; ++i)
                 {
-                    indicatorToggle('r');
+                    indicatorToggle(indicatorNetwork, 'r');
                     if (WiFi.status() == WL_CONNECTED)
                     {
-                        indicatorClear();
+                        indicatorClear(indicatorNetwork);
                         return 1;
                     }
                     delay(500);
@@ -785,19 +788,19 @@ void WiFiInitialize()
 
 int WiFiPortal()
 {
-    indicatorSet('b');
+    indicatorSet(indicatorNetwork, 'b');
     WM.setConfigPortalTimeout(180);
     WM.startConfigPortal((Name + "s_Pulser").c_str());
     if (WiFi.status() == WL_CONNECTED)
     {
         WiFiConfigWrite(WM.getWiFiSSID(), WM.getWiFiPass());
         WiFiAdd(WM.getWiFiSSID(), WM.getWiFiPass());
-        indicatorClear();
+        indicatorClear(indicatorNetwork);
         return 1;
     }
     else
     {
-        indicatorClear();
+        indicatorClear(indicatorNetwork);
         ESP.deepSleepInstant(INT32_MAX);
     }
 }
