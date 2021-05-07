@@ -26,7 +26,7 @@ const byte Sleep = 100;
 const int MQTTPort = 1883;
 const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
 const String Pulse = "&b0d&L00&N////;;;;;;;;&b20&L14&N////;;;;&B16&L18&N////;;;;;;;;;;;;;;;;;;;;&B08&L02&N////;;;;;;;;";
-const char *Version = "v2.1.05062000";
+const char *Version = "v2.2.05080037";
 
 String Name;
 String MQTTUsername;
@@ -34,7 +34,6 @@ String MQTTPassword;
 String MQTTClientid;
 String MQTTPub[2];
 String MQTTSub[2];
-float batteryOffset;
 
 //define in FS
 // byte H = 0;
@@ -43,21 +42,21 @@ float batteryOffset;
 // byte A = 5;
 // byte B = 35;
 
-bool batteryBeginFlag = 0;
-
-bool heartBeginFlag = 0;
+bool batteryAnimationFlag = 0;
+float batteryOffset;
 
 byte indicators[2] = {0, 10};
 bool indicatorFlags[2] = {0, 0};
 byte indicatorBattery = 0;
 byte indicatorNetwork = 1;
+byte indicatorOnline = 0;
 byte indicatorLightness = 20;
-bool indicatorToggleFlag = 0;
 
 bool pulseConflictFlag = 0;
 byte pulseOtherH;
-bool pulseOtherOnline = 0;
-byte pulseTickerTimeout;
+byte pulseTimeout;
+bool pulseOnlineFlag = 0;
+byte pulseOnlineTimeout;
 
 bool streamBeginFlag = 0;
 byte streamCache = 1;
@@ -70,6 +69,7 @@ WiFiManager WM;
 Ticker buttonTicker[3];
 Ticker heartTicker;
 Ticker pulseTicker;
+Ticker pulseOnlineTicker;
 
 DataStream stream;
 Pixel pixels[PixelLen];
@@ -122,8 +122,8 @@ void attachs()
 {
     streamOpen();
     attachInterrupt(digitalPinToInterrupt(PinTouch), buttonTickIrq, CHANGE);
-    button.attachClick([]() { stream.write("&C1&A00;" + Pulse + "&C0;"); });
-    button.attachDoubleClick([]() { batteryBeginFlag = 1; });
+    button.attachClick([]() { pulseOnlineFlag = 1; });
+    button.attachDoubleClick([]() { batteryAnimationFlag = 1; });
     // button.attachMultiClick([]() { stream.write(Pulse3); });
     button.attachLongPressStart(pulseStart);
     button.attachLongPressStop(pulseStop);
@@ -150,7 +150,6 @@ void battryAnimation()
     byte battery = batteryGet();
     heartClear();
     detachs();
-    heartBegin();
     for (byte i = 0; i < PixelLen; ++i)
     {
         heart.SetPixelColor(i, HslColor(i / (PixelLen * 3.0f), 1, indicatorLightness / 510.0f));
@@ -198,7 +197,6 @@ byte batteryGet()
 void batteryInitialize()
 {
     byte battery = batteryGet();
-    heartBegin();
     heart.SetPixelColor(indicators[indicatorBattery], HslColor(battery / 300.0f, 1, indicatorLightness / 510.0f));
     heart.Show();
     if (battery == 0)
@@ -212,6 +210,20 @@ void batteryInitialize()
 void batteryMsg()
 {
     MQTT.publish(MQTTPub[0], String(batteryGet()) + '%');
+}
+
+void buttonLoop()
+{
+    if (batteryAnimationFlag)
+    {
+        batteryAnimationFlag = 0;
+        battryAnimation();
+    }
+    else if (pulseOnlineFlag)
+    {
+        pulseOnlineFlag = 0;
+        pulseOnline();
+    }
 }
 
 ICACHE_RAM_ATTR void buttonTickIrq()
@@ -236,29 +248,8 @@ void configMsg()
 
 void defaultMsg(String &payload) {}
 
-void hslMsg(String &payload)
-{
-    if (payload.length() > 2)
-    {
-        for (unsigned int i = 2; i < payload.length(); i++)
-        {
-            stream.write(payload[i]);
-        }
-    }
-}
-
-void heartBegin()
-{
-    if (!heartBeginFlag)
-    {
-        heartBeginFlag = 1;
-        heart.Begin();
-    }
-}
-
 void heartClear()
 {
-    heartBegin();
     heart.ClearTo(RgbColor(0, 0, 0));
     heart.Show();
     // heartEnd(); need delay > 1 after show()
@@ -266,7 +257,6 @@ void heartClear()
 
 void heartClear(byte i)
 {
-    heartBegin();
     heart.SetPixelColor(i, RgbColor(0, 0, 0));
     heart.Show();
 }
@@ -279,12 +269,14 @@ void heartColorSets(byte Idx)
     }
 }
 
-void heartEnd()
+void heartMsg(String &payload)
 {
-    if (heartBeginFlag)
+    if (payload.length() > 2)
     {
-        heartBeginFlag = 0;
-        pinMode(3, INPUT);
+        for (unsigned int i = 2; i < payload.length(); i++)
+        {
+            stream.write(payload[i]);
+        }
     }
 }
 
@@ -384,7 +376,6 @@ void indicatorClear(byte indicator)
 void indicatorSet(byte indicator, char c)
 {
     indicatorFlags[indicator] = true;
-    heartBegin();
     RgbColor color;
     switch (c)
     {
@@ -418,15 +409,6 @@ void indicatorToggle(byte indicator, char c)
     }
 }
 
-void menuLoop()
-{
-    if (batteryBeginFlag)
-    {
-        batteryBeginFlag = 0;
-        battryAnimation();
-    }
-}
-
 void MQTTConnect()
 {
     // heartClear(); cause to turn off battery indicator.
@@ -447,8 +429,6 @@ void MQTTConnect()
     ackMsg();
     heartClear();
     attachs();
-    delay(10);
-    heartEnd();
 }
 
 void MQTTInitialize()
@@ -485,16 +465,13 @@ void MQTTMsg(String &topic, String &payload)
             defaultMsg(payload);
             break;
         case 'H':
-            hslMsg(payload);
+            heartMsg(payload);
             break;
         case 'I':
             idMsg();
             break;
         case 'P':
             pulseMsg(payload);
-            break;
-        case 'R':
-            rgbMsg(payload);
             break;
         case 'U':
             updateMsg(payload);
@@ -528,7 +505,7 @@ void pulseBegin(bool other)
     if (!pulseTicker.active())
     {
         stream.write("&C1&A00;");
-        pulseTickerTimeout = 20;
+        pulseTimeout = 20;
         pulseTicker.attach_ms(675, pulseTick);
     }
     else
@@ -556,15 +533,22 @@ void pulseMsg(String &payload)
     switch (payload[2])
     {
     case 'A':
+        // MQTT.publish(MQTTPub[1], ":Pa");
         pulseOtherH = parseHex(payload[3], payload[4]);
         pulseBegin(1);
-        // MQTT.publish(MQTTPub[1], ":Pa");
         break;
     case 'a':
         /* code */
         break;
     case 'B':
         pulseEnd(1);
+        break;
+    case 'O':
+        MQTT.publish(MQTTPub[1], ":Po");
+        break;
+    case 'o':
+        indicatorSet(indicatorOnline, 'g');
+        pulseOnlineTicker.once(3, []() { indicatorClear(indicatorOnline); });
         break;
     default:
         break;
@@ -573,8 +557,24 @@ void pulseMsg(String &payload)
 
 void pulseOnline()
 {
-
     MQTT.publish(MQTTPub[1], ":PO");
+    indicatorClear(indicatorOnline);
+    pulseOnlineTimeout = 10;
+    pulseOnlineTicker.attach_ms(500, pulseOnlineTick);
+}
+
+void pulseOnlineTick()
+{
+    if (pulseOnlineTimeout)
+    {
+        --pulseOnlineTimeout;
+        indicatorToggle(indicatorOnline, 'r');
+    }
+    else
+    {
+        indicatorSet(indicatorOnline, 'r');
+        pulseOnlineTicker.once(3, []() { indicatorClear(indicatorOnline); });
+    }
 }
 
 void pulseStart()
@@ -591,9 +591,9 @@ void pulseStop()
 
 void pulseTick()
 {
-    if (pulseTickerTimeout)
+    if (pulseTimeout)
     {
-        --pulseTickerTimeout;
+        --pulseTimeout;
         stream.write(Pulse);
     }
     else
@@ -602,11 +602,9 @@ void pulseTick()
     }
 }
 
-void rgbMsg(String &payload) {}
-
 void streamBegin()
 {
-    heartBegin();
+    pulseOnlineTicker.detach();
     heartTicker.attach_ms(FrameRate, heartTick);
 }
 
@@ -619,7 +617,6 @@ void streamClose()
 void streamEnd()
 {
     heartTicker.detach();
-    heartEnd();
 }
 
 void streamLoop()
@@ -809,6 +806,7 @@ void setup()
 {
     PreDefines();
 
+    heart.Begin();
     batteryInitialize();
     WiFiInitialize();
     MQTTInitialize();
@@ -822,7 +820,7 @@ void loop()
 
     streamLoop();
 
-    menuLoop();
+    buttonLoop();
 
     delay(Sleep);
 }
