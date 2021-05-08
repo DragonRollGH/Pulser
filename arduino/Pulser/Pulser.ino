@@ -47,6 +47,8 @@ byte indicatorLightness = 20;
 
 bool MPUBeginFlag = 0;
 
+unsigned int heartHueTimeout;
+
 bool pulseConflictFlag = 0;
 byte pulseOtherH;
 byte pulseTimeout;
@@ -276,6 +278,7 @@ void heartHueBegin()
     MPU.setDLPFMode(MPU6050_DLPF_6);
     colors[1].L = colors[0].L;
     stream.write("&C1&A02&B08;");
+    heartHueTimeout = 1800;
     heartHueTicker.attach_ms(FrameRate * 2, heartHueTick);
 }
 
@@ -288,16 +291,24 @@ void heartHueEnd()
 
 void heartHueTick()
 {
-    Vector acc = MPU.readRawAccel();
-    float rad = atan2f(acc.XAxis, acc.YAxis) + PI;
-    byte idx = rad / PixelRad;
-    colors[colorCurrent].H = idx * 255 / PixelLen;
-    stream.write("&n");
-    stream.write(idx);
-    stream.write(';');
-    if (buttonFlags[1])
+    if (heartHueTimeout)
     {
-        buttonFlags[1] = 0;
+        --heartHueTimeout;
+        Vector acc = MPU.readRawAccel();
+        float rad = atan2f(acc.XAxis, acc.YAxis) + PI;
+        byte idx = rad / PixelRad;
+        colors[colorCurrent].H = idx * 255 / PixelLen;
+        stream.write("&n");
+        stream.write(idx);
+        stream.write(';');
+        if (buttonFlags[1])
+        {
+            buttonFlags[1] = 0;
+            heartHueEnd();
+        }
+    }
+    else
+    {
         heartHueEnd();
     }
 }
