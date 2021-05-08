@@ -25,7 +25,7 @@ const byte Sleep = 100;
 const int MQTTPort = 1883;
 const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
 const String Pulse = "&b0d&L00&N////;;;;;;;;&b20&L14&N////;;;;&B16&L18&N////;;;;;;;;;;;;;;;;;;;;&B08&L02&N////;;;;;;;;";
-const char *Version = "v3.0.05082200";
+const char *Version = "v3.0.1";
 
 String Name;
 String MQTTUsername;
@@ -274,18 +274,22 @@ void heartColorSets(byte Idx)
 
 void heartHueBegin()
 {
-    MPU.setSleepEnabled(0);
-    MPU.setDLPFMode(MPU6050_DLPF_6);
-    colors[1].L = colors[0].L;
-    stream.write("&C1&A02&B08;");
-    heartHueTimeout = 1800;
-    heartHueTicker.attach_ms(FrameRate * 2, heartHueTick);
+    if (!pulseTicker.active())
+    {
+        MPU.setSleepEnabled(0);
+        MPU.setDLPFMode(MPU6050_DLPF_6);
+        colors[1].L = colors[0].L;
+        stream.write("&C1&A02&B08;");
+        heartHueTimeout = 1800;
+        heartHueTicker.attach_ms(FrameRate * 2, heartHueTick);
+    }
 }
 
 void heartHueEnd()
 {
     MPU.setSleepEnabled(1);
     stream.write("&C0;");
+    colors[0].H = colors[1].H;
     heartHueTicker.detach();
 }
 
@@ -606,10 +610,13 @@ void pulseMsg(String &payload)
 
 void pulseOnlineBegin()
 {
-    MQTT.publish(MQTTPub[1], ":PO");
-    indicatorClear(indicatorOnline);
-    pulseOnlineTimeout = 6;
-    pulseOnlineTicker.attach_ms(500, pulseOnlineTick);
+    if (!pulseTicker.active())
+    {
+        MQTT.publish(MQTTPub[1], ":PO");
+        indicatorClear(indicatorOnline);
+        pulseOnlineTimeout = 6;
+        pulseOnlineTicker.attach_ms(500, pulseOnlineTick);
+    }
 }
 
 void pulseOnlineEnd()
