@@ -227,11 +227,13 @@ function pubChange() {
 Page({
   cmdSend: cmdSend,
   data: {
-    hueBlock: 'red',
+    hue: '127',
+    hueBlock: `rgb(${hsv2rgb(Math.round(127 * 359 / 255), 1 ,1)})`,
     huePressed: false,
     pubUserL: 'pubUserOff',
     pubUserR: 'pubUserOff',
-    pubButton: pubButton[1]
+    pubButton: pubButton[1],
+    lightness: '20',
   },
   heartTouchStart: heartTouchStart,
   heartTouchMove: heartTouchMove,
