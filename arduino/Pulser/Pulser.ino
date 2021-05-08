@@ -6,6 +6,7 @@
 #include <ESP8266HTTPClient.h>
 #include <ESP8266httpUpdate.h>
 #include <LittleFS.h>
+#include <MPU6050.h>
 #include <MQTT.h>
 #include <NeoPixelBus.h>
 #include <OneButton.h>
@@ -16,17 +17,15 @@
 #include "DataStream.cpp"
 #include "Pixel.cpp"
 
-// const int MPU = 0x68;  //MPU-6050的I2C地址
-// const int nValCnt = 4; //一次读取寄存器的数量
-
 const byte PixelLen = 20;
+const float PixelRad = TWO_PI / PixelLen;
 const byte FrameRate = 17; // =1000ms/60fps
 const byte PinTouch = 12;
 const byte Sleep = 100;
 const int MQTTPort = 1883;
 const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
 const String Pulse = "&b0d&L00&N////;;;;;;;;&b20&L14&N////;;;;&B16&L18&N////;;;;;;;;;;;;;;;;;;;;&B08&L02&N////;;;;;;;;";
-const char *Version = "v2.2.05080037";
+const char *Version = "v3.0.05082200";
 
 String Name;
 String MQTTUsername;
@@ -35,15 +34,9 @@ String MQTTClientid;
 String MQTTPub[2];
 String MQTTSub[2];
 
-//define in FS
-// byte H = 0;
-// byte S = 255;
-// byte L = 20;
-// byte A = 5;
-// byte B = 35;
+float batteryOffset = 0;
 
-bool batteryAnimationFlag = 0;
-float batteryOffset;
+bool buttonFlags[4];
 
 byte indicators[2] = {0, 10};
 bool indicatorFlags[2] = {0, 0};
@@ -52,15 +45,17 @@ byte indicatorNetwork = 1;
 byte indicatorOnline = 0;
 byte indicatorLightness = 20;
 
+bool MPUBeginFlag = 0;
+
 bool pulseConflictFlag = 0;
 byte pulseOtherH;
 byte pulseTimeout;
-bool pulseOnlineFlag = 0;
 byte pulseOnlineTimeout;
 
 bool streamBeginFlag = 0;
 byte streamCache = 1;
 
+MPU6050 MPU;
 MQTTClient MQTT(512);
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> heart(PixelLen);
 OneButton button(PinTouch, false, false);
@@ -68,6 +63,7 @@ WiFiClient WLAN;
 WiFiManager WM;
 Ticker buttonTicker[3];
 Ticker heartTicker;
+Ticker heartHueTicker;
 Ticker pulseTicker;
 Ticker pulseOnlineTicker;
 
@@ -114,7 +110,6 @@ void PreDefines()
         MQTTPub[1] = "";
         MQTTSub[0] = "";
         MQTTSub[1] = "";
-        batteryOffset = 0;
     }
 }
 
@@ -122,15 +117,17 @@ void attachs()
 {
     streamOpen();
     attachInterrupt(digitalPinToInterrupt(PinTouch), buttonTickIrq, CHANGE);
-    button.attachClick([]() { pulseOnlineFlag = 1; });
-    button.attachDoubleClick([]() { batteryAnimationFlag = 1; });
-    // button.attachMultiClick([]() { stream.write(Pulse3); });
+    button.attachClick([]() { buttonFlags[1] = 1; });
+    button.attachDoubleClick([]() { buttonFlags[2] = 1; });
+    button.attachMultiClick([]() { buttonFlags[3] = 1; });
     button.attachLongPressStart(pulseStart);
     button.attachLongPressStop(pulseStop);
 }
 
 void detachs()
 {
+    heartHueEnd();
+    pulseOnlineEnd();
     streamEnd();
     streamClose();
     button.reset();
@@ -168,7 +165,7 @@ void battryAnimation()
         heartClear();
         ESP.deepSleepInstant(INT32_MAX);
     }
-    delay(3000);
+    delay(2000);
     heartClear();
     attachs();
 }
@@ -214,15 +211,20 @@ void batteryMsg()
 
 void buttonLoop()
 {
-    if (batteryAnimationFlag)
+    if (buttonFlags[1] && !heartHueTicker.active())
     {
-        batteryAnimationFlag = 0;
+        buttonFlags[1] = 0;
+        heartHueBegin();
+    }
+    else if (buttonFlags[2])
+    {
+        buttonFlags[2] = 0;
         battryAnimation();
     }
-    else if (pulseOnlineFlag)
+    else if (buttonFlags[3])
     {
-        pulseOnlineFlag = 0;
-        pulseOnline();
+        buttonFlags[3] = 0;
+        pulseOnlineBegin();
     }
 }
 
@@ -246,8 +248,6 @@ void configMsg()
     LittleFS.end();
 }
 
-void defaultMsg(String &payload) {}
-
 void heartClear()
 {
     heart.ClearTo(RgbColor(0, 0, 0));
@@ -269,9 +269,43 @@ void heartColorSets(byte Idx)
     }
 }
 
+void heartHueBegin()
+{
+    MPU.setSleepEnabled(0);
+    MPU.setDLPFMode(MPU6050_DLPF_6);
+    colors[1].L = colors[0].L;
+    stream.write("&C1&A02&B08;");
+    heartHueTicker.attach_ms(FrameRate * 2, heartHueTick);
+}
+
+void heartHueEnd()
+{
+    MPU.setSleepEnabled(1);
+    stream.write("&C0;");
+    heartHueTicker.detach();
+}
+
+void heartHueTick()
+{
+    Vector acc = MPU.readRawAccel();
+    float rad = atan2f(acc.XAxis, acc.YAxis) + PI;
+    byte idx = rad / PixelRad;
+    colors[colorCurrent].H = idx * 255 / PixelLen;
+    stream.write("&n");
+    stream.write(idx);
+    stream.write(';');
+    if (buttonFlags[1])
+    {
+        buttonFlags[1] = 0;
+        heartHueEnd();
+    }
+}
+
 void heartMsg(String &payload)
 {
-    if (payload.length() > 2)
+    heartHueEnd();
+    pulseOnlineEnd();
+    if (payload.length() > 2 && !pulseTicker.active())
     {
         for (unsigned int i = 2; i < payload.length(); i++)
         {
@@ -293,6 +327,11 @@ void heartRun(byte b1, byte b2, byte b3, byte b4)
         }
         arry[i / 8] <<= 1;
     }
+}
+
+void heartRun(byte b)
+{
+    pixels[b].run(colors[colorCurrent]);
 }
 
 void heartTick()
@@ -328,6 +367,9 @@ void heartTick()
                 break;
             case 'N':
                 heartRun(stream.read(), stream.read(), stream.read(), stream.read());
+                break;
+            case 'n':
+                heartRun(stream.read());
                 break;
             default:
                 break;
@@ -461,9 +503,6 @@ void MQTTMsg(String &topic, String &payload)
         case 'C':
             configMsg();
             break;
-        case 'D':
-            defaultMsg(payload);
-            break;
         case 'H':
             heartMsg(payload);
             break;
@@ -501,6 +540,8 @@ byte parseHex(byte H, byte L)
 
 void pulseBegin(bool other)
 {
+    heartHueEnd();
+    pulseOnlineEnd();
     colors[1].H = (other) ? pulseOtherH : colors[0].H;
     if (!pulseTicker.active())
     {
@@ -533,12 +574,8 @@ void pulseMsg(String &payload)
     switch (payload[2])
     {
     case 'A':
-        // MQTT.publish(MQTTPub[1], ":Pa");
         pulseOtherH = parseHex(payload[3], payload[4]);
         pulseBegin(1);
-        break;
-    case 'a':
-        /* code */
         break;
     case 'B':
         pulseEnd(1);
@@ -548,19 +585,24 @@ void pulseMsg(String &payload)
         break;
     case 'o':
         indicatorSet(indicatorOnline, 'g');
-        pulseOnlineTicker.once(3, []() { indicatorClear(indicatorOnline); });
+        pulseOnlineTicker.once(2, []() { indicatorClear(indicatorOnline); });
         break;
     default:
         break;
     }
 }
 
-void pulseOnline()
+void pulseOnlineBegin()
 {
     MQTT.publish(MQTTPub[1], ":PO");
     indicatorClear(indicatorOnline);
-    pulseOnlineTimeout = 10;
+    pulseOnlineTimeout = 6;
     pulseOnlineTicker.attach_ms(500, pulseOnlineTick);
+}
+
+void pulseOnlineEnd()
+{
+    pulseOnlineTicker.detach();
 }
 
 void pulseOnlineTick()
@@ -573,7 +615,7 @@ void pulseOnlineTick()
     else
     {
         indicatorSet(indicatorOnline, 'r');
-        pulseOnlineTicker.once(3, []() { indicatorClear(indicatorOnline); });
+        pulseOnlineTicker.once(2, []() { indicatorClear(indicatorOnline); });
     }
 }
 
@@ -604,7 +646,6 @@ void pulseTick()
 
 void streamBegin()
 {
-    pulseOnlineTicker.detach();
     heartTicker.attach_ms(FrameRate, heartTick);
 }
 
@@ -807,6 +848,8 @@ void setup()
     PreDefines();
 
     heart.Begin();
+    MPU.begin();
+    MPU.setSleepEnabled(1);
     batteryInitialize();
     WiFiInitialize();
     MQTTInitialize();
