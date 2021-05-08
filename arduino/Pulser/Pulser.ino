@@ -82,22 +82,23 @@ std::vector<WiFiEntry> WiFiList;
 void PreDefines()
 {
     unsigned int ID = ESP.getChipId();
-    if (ID == 15406060)
+    if (ID == 10409937)
     {
         MQTTPub[0] = "PB/U/M";
         MQTTPub[1] = "PB/D/R";
         MQTTSub[0] = "PB/D/M";
         MQTTSub[1] = "PB/D/MR";
-        batteryOffset = -0.03;
+        batteryOffset = -0.19;
         colors[0].H = 120;
     }
-    else if (ID == 10409937)
+    else if (ID == 15406060)
     {
         MQTTPub[0] = "PB/U/R";
         MQTTPub[1] = "PB/D/M";
         MQTTSub[0] = "PB/D/R";
         MQTTSub[1] = "PB/D/MR";
-        batteryOffset = -0.19;
+
+        batteryOffset = -0.03;
         colors[0].H = 0;
     }
     else
