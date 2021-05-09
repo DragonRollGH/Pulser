@@ -25,7 +25,7 @@ const byte Sleep = 100;
 const int MQTTPort = 1883;
 const char *MQTTServer = "ajdnaud.iot.gz.baidubce.com";
 const String Pulse = "&b0d&L00&N////;;;;;;;;&b20&L14&N////;;;;&B16&L18&N////;;;;;;;;;;;;;;;;;;;;&B08&L02&N////;;;;;;;;";
-const char *Version = "v3.0.1";
+const char *Version = "v3.0.2";
 
 String Name;
 String MQTTUsername;
@@ -289,7 +289,6 @@ void heartHueEnd()
 {
     MPU.setSleepEnabled(1);
     stream.write("&C0;");
-    colors[0].H = colors[1].H;
     heartHueTicker.detach();
 }
 
@@ -308,6 +307,7 @@ void heartHueTick()
         if (buttonFlags[1])
         {
             buttonFlags[1] = 0;
+            colors[0].H = colors[1].H;
             heartHueEnd();
         }
     }
